@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="description"
+    content="A seemingly ordinary website. Something is not quite right."
+  >
+
+  <meta name="theme-color" content="#f7f7f5">
+
+  <title>Help Center</title>
+
+  <link rel="stylesheet" href="./css/global.css">
+  <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/games.css">
+
+  <script>
+    // Restore a requested path after GitHub Pages' 404 fallback.
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const requestedPath = params.get("p");
+
+      if (requestedPath && requestedPath.startsWith("/")) {
+        history.replaceState(null, "", requestedPath);
+      }
+    })();
+  </script>
+</head>
+
+<body>
+  <div id="site-shell">
+    <header class="site-header">
+      <a
+        class="site-brand"
+        href="/"
+        id="site-brand"
+        aria-label="Help Center home"
+      >
+        <span class="brand-mark" aria-hidden="true">?</span>
+        <span data-i18n="siteName">帮助中心</span>
+      </a>
+
+      <nav class="header-actions" aria-label="Site controls">
+        <button
+          type="button"
+          id="language-toggle"
+          class="language-toggle"
+          aria-label="Switch language"
+        >
+          EN
+        </button>
+
+        <button
+          type="button"
+          id="hint-toggle"
+          class="quiet-button"
+          data-i18n="hintButton"
+        >
+          提示
+        </button>
+      </nav>
+    </header>
+
+    <main id="app" class="app-main" tabindex="-1">
+      <section class="loading-panel" aria-live="polite">
+        <p data-i18n="loading">正在载入页面……</p>
+      </section>
+    </main>
+
+    <aside
+      id="narrator-panel"
+      class="narrator-panel"
+      aria-label="Narrator"
+      aria-live="polite"
+    >
+      <div class="narrator-avatar" aria-hidden="true">N</div>
+
+      <div class="narrator-content">
+        <div class="narrator-heading">
+          <span id="narrator-name">旁白</span>
+          <span id="narrator-mood" class="narrator-mood"></span>
+        </div>
+
+        <p id="narrator-text" class="narrator-text">
+          ……你终于来了。
+        </p>
+
+        <div class="narrator-actions">
+          <button
+            type="button"
+            id="narrator-next"
+            class="text-button"
+            data-i18n="narratorNext"
+          >
+            继续
+          </button>
+
+          <button
+            type="button"
+            id="narrator-hide"
+            class="text-button"
+            data-i18n="narratorHide"
+          >
+            暂时闭嘴
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <footer class="site-footer">
+      <span data-i18n="footerCopyright">
+        © 2026 Help Center
+      </span>
+
+      <span class="footer-separator" aria-hidden="true">·</span>
+
+      <span data-i18n="footerStatus">所有系统运行正常</span>
+    </footer>
+  </div>
+
+  <div
+    id="toast-region"
+    class="toast-region"
+    aria-live="polite"
+    aria-atomic="true"
+  ></div>
+
+  <noscript>
+    <main class="noscript-message">
+      <h1>JavaScript is required</h1>
+      <p>请启用 JavaScript 后再访问此网站。</p>
+    </main>
+  </noscript>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
