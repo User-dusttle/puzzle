@@ -9,7 +9,7 @@ import Progress from "../progress.js";
 // =========================================================
 
 const IMAGE_FILENAME = "aioJwoiZk";
-const IMAGE_URL = "/assets/images/aioJwoiZk.png";
+const IMAGE_URL = "/puzzle/Game/assets/images/aioJwoiZk.png";
 const STAGE04_TOKEN = "x7_qm-04_vn";
 const STAGE05_KEY = "RGGTR06_LGPM";
 
