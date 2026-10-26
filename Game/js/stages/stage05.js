@@ -237,7 +237,7 @@ function makeTileElement(tile) {
   face.style.height = "100%";
   face.style.alignItems = "center";
   face.style.justifyContent = "center";
-  face.style.borderRadius = "5px";
+  face.style.borderRadius = "4px";
   face.style.fontWeight = "800";
   face.style.fontSize = "clamp(15px, 4vw, 28px)";
   face.style.boxSizing = "border-box";
@@ -260,11 +260,8 @@ function makeTileElement(tile) {
 
     element.setAttribute("aria-label", "Hidden key");
     element.dataset.revealed = "true";
-
     overflowFound = true;
 
-    // Reveal the secret with a brief glitch animation.
-    // Deliberately do not interrupt the player with narration.
     faceElement.animate(
       [
         {
@@ -358,16 +355,96 @@ function render() {
   root.innerHTML = `
     <section class="stage stage05">
       <style>
-        .s05-layout {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr);
-          gap: 22px;
-          max-width: 800px;
-          margin: 0 auto;
+        .stage05 {
+          width: 100%;
+          max-width: var(--content-width, 1080px);
+          margin-inline: auto;
+          color: var(--color-text, #242424);
+          font-family: var(--font-sans, sans-serif);
         }
 
-        .s05-panel {
+        .stage05 .s05-panel {
           min-width: 0;
+          padding: clamp(16px, 3vw, 30px);
+          border: 1px solid var(--color-border, #deded8);
+          border-radius: var(--radius-lg, 12px);
+          background: var(--color-surface, #fff);
+          box-shadow: var(--shadow-panel, 0 2px 10px rgb(0 0 0 / 4%));
+        }
+
+        .stage05 h1 {
+          margin: 0 0 26px;
+          padding-bottom: 18px;
+          border-bottom: 1px solid var(--color-border, #deded8);
+          font-size: clamp(1.6rem, 3vw, 2rem);
+          font-weight: 600;
+          letter-spacing: -0.025em;
+        }
+
+        .stage05 h2 {
+          margin: 0;
+          font-size: 1.2rem;
+          font-weight: 600;
+          letter-spacing: -0.015em;
+        }
+
+        .s05-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+          align-items: start;
+          gap: clamp(20px, 3vw, 32px);
+          max-width: 100%;
+          margin: 0;
+        }
+
+        .s05-panel,
+        .s05-layout > *,
+        .s05-decoder {
+          min-width: 0;
+        }
+
+        .s05-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-bottom: 16px;
+        }
+
+        .stage05 .s05-toolbar button {
+          min-height: 36px;
+          padding: 7px 12px;
+          border: 1px solid var(--color-border, #deded8);
+          border-radius: var(--radius-sm, 4px);
+          background: var(--color-surface, #fff);
+          color: var(--color-text, #242424);
+          font-size: var(--font-size-sm, 0.875rem);
+          font-weight: 500;
+          transition:
+            background-color var(--transition-fast, 140ms ease),
+            border-color var(--transition-fast, 140ms ease);
+        }
+
+        .stage05 .s05-toolbar button:hover {
+          border-color: var(--color-accent, #315e8a);
+          background: var(--color-surface-muted, #f0f0ed);
+        }
+
+        .stage05 .s05-score {
+          padding: 5px 10px;
+          border: 1px solid var(--color-border, #deded8);
+          border-radius: var(--radius-sm, 4px);
+          background: var(--color-surface-muted, #f0f0ed);
+          color: var(--color-text-secondary, #777771);
+          font-size: var(--font-size-sm, 0.875rem);
+          font-variant-numeric: tabular-nums;
+        }
+
+        .stage05 .s05-score strong {
+          margin-left: 4px;
+          color: var(--color-text, #242424);
+          font-family: var(--font-mono, monospace);
         }
 
         .s05-board-wrap {
@@ -379,16 +456,14 @@ function render() {
         .s05-board {
           position: relative;
           width: 100%;
-          aspect-ratio: 1 / 1;
+          aspect-ratio: 1;
           overflow: hidden;
-          border-radius: 12px;
+          border: 1px solid rgb(0 0 0 / 7%);
+          border-radius: 7px;
           background: #bbada0;
+          box-shadow: none;
           touch-action: none;
           user-select: none;
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          box-shadow:
-            0 12px 32px rgba(0, 0, 0, 0.13),
-            inset 0 0 0 1px rgba(0, 0, 0, 0.05);
         }
 
         .s05-grid {
@@ -397,8 +472,6 @@ function render() {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
           grid-template-rows: repeat(4, minmax(0, 1fr));
-          gap: 0;
-          padding: 0;
           pointer-events: none;
         }
 
@@ -406,16 +479,15 @@ function render() {
           min-width: 0;
           min-height: 0;
           padding: 5px;
-          box-sizing: border-box;
         }
 
         .s05-cell::before {
-          content: "";
           display: block;
           width: 100%;
           height: 100%;
-          background: rgba(238, 228, 218, 0.35);
-          border-radius: 6px;
+          border-radius: 4px;
+          background: rgb(238 228 218 / 36%);
+          content: "";
         }
 
         .s05-tile-layer {
@@ -428,142 +500,142 @@ function render() {
         }
 
         .s05-tile:focus-visible {
-          outline: 2px solid #39ff88;
           z-index: 20;
+          outline: 2px solid var(--color-accent, #315e8a);
         }
 
         .s05-tile-face {
           overflow: hidden;
           overflow-wrap: anywhere;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+          border-radius: 4px;
+          box-shadow: none;
         }
 
-        .s05-toolbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-bottom: 14px;
+        .stage05 #s05-game-content > p {
+          margin: 0 0 14px;
+          color: var(--color-text-secondary, #777771);
+          font-size: var(--font-size-sm, 0.875rem);
         }
 
-        .s05-decoder {
-          display: grid;
-          align-content: start;
-          gap: 12px;
-          min-width: 0;
-          padding: 20px;
-          border: 1px solid var(--border, #ddd);
-          border-radius: 12px;
-          background:
-            linear-gradient(
-              145deg,
-              rgba(120, 150, 130, 0.07),
-              rgba(120, 150, 130, 0.015)
-            );
-        }
-
-        .s05-decoder h2 {
-          margin-top: 0;
-          padding-bottom: 12px;
-          border-bottom: 1px solid var(--border, #ddd);
-        }
-
-        .s05-decoder label {
-          font-size: 0.9rem;
-          font-weight: 650;
-          opacity: 0.85;
-        }
-
-        .s05-decoder input {
-          box-sizing: border-box;
-          width: 100%;
-          min-width: 0;
-          padding: 12px;
-          border: 1px solid var(--border, #ccc);
-          border-radius: 8px;
-          background: var(--input-bg, transparent);
-          transition:
-            border-color 160ms ease,
-            box-shadow 160ms ease;
-        }
-
-        .s05-decoder input:focus {
-          outline: none;
-          border-color: #37a76b;
-          box-shadow: 0 0 0 3px rgba(55, 167, 107, 0.14);
-        }
-
-        .s05-output {
-          min-height: 1.5em;
-          padding: 12px;
-          overflow-wrap: anywhere;
-          border-radius: 8px;
-          background: rgba(128, 128, 128, 0.07);
-          font-family: var(--mono, monospace);
-        }
-
-        .s05-hidden {
-          display: none !important;
-        }
-
-        .s05-score {
-          display: inline-block;
-          padding: 8px 12px;
-          border: 1px solid rgba(120, 150, 130, 0.2);
-          border-radius: 8px;
-          background: rgba(120, 150, 130, 0.1);
-          font-variant-numeric: tabular-nums;
+        .stage05 #s05-game-message {
+          margin: 12px 0 0;
+          color: var(--color-text-secondary, #777771);
+          font-size: var(--font-size-sm, 0.875rem);
         }
 
         .s05-game-content[hidden] {
           display: none !important;
         }
 
-        .s05-notice {
-          padding: 12px;
-          border: 1px solid var(--border, #888);
-          border-radius: 8px;
+        .s05-decoder {
+          display: grid;
+          align-content: start;
+          gap: 10px;
+          padding: 0 0 0 24px;
+          border: 0;
+          border-left: 1px solid var(--color-border, #deded8);
+          border-radius: 0;
+          background: transparent;
         }
 
-        /* Laboratory visual treatment */
-
-        .stage05 {
-          position: relative;
+        .s05-decoder h2 {
+          margin-bottom: 8px;
+          padding: 0 0 14px;
+          border-bottom: 1px solid var(--color-border, #deded8);
         }
 
-        .stage05 .card {
-          position: relative;
-          overflow: hidden;
-          border: 1px solid rgba(120, 150, 130, 0.28);
-          border-radius: 16px;
-          background:
-            radial-gradient(
-              ellipse at 8% 0%,
-              rgba(50, 180, 110, 0.09),
-              transparent 42%
-            ),
-            var(--card-bg, #fff);
-          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+        .s05-decoder label {
+          margin-top: 4px;
+          color: var(--color-text-secondary, #777771);
+          font-size: var(--font-size-sm, 0.875rem);
+          font-weight: 500;
         }
 
-        .stage05 h1 {
-          letter-spacing: 0.04em;
+        .s05-decoder input {
+          width: 100%;
+          min-width: 0;
+          min-height: 40px;
+          padding: 9px 11px;
+          border: 1px solid var(--color-border, #deded8);
+          border-radius: var(--radius-sm, 4px);
+          background: var(--color-surface, #fff);
+          color: var(--color-text, #242424);
+          font-family: var(--font-mono, monospace);
+          font-size: var(--font-size-sm, 0.875rem);
+          transition:
+            border-color var(--transition-fast, 140ms ease),
+            box-shadow var(--transition-fast, 140ms ease);
         }
 
-        .stage05 .s05-board {
-          background: #b7aa9e;
+        .s05-decoder input:focus {
+          outline: none;
+          border-color: var(--color-accent, #315e8a);
+          box-shadow: 0 0 0 2px rgb(49 94 138 / 12%);
         }
 
-        .stage05 .s05-output:empty {
+        .s05-decoder input::placeholder {
+          color: #92928b;
+          font-family: var(--font-sans, sans-serif);
+        }
+
+        .stage05 #s05-decode {
+          justify-self: start;
+          min-height: 38px;
+          margin-top: 5px;
+          padding: 8px 20px;
+          border: 1px solid var(--color-accent, #315e8a);
+          border-radius: var(--radius-sm, 4px);
+          background: var(--color-accent, #315e8a);
+          color: #fff;
+          font-size: var(--font-size-sm, 0.875rem);
+          font-weight: 500;
+          transition: background-color var(--transition-fast, 140ms ease);
+        }
+
+        .stage05 #s05-decode:hover {
+          background: var(--color-accent-hover, #24486c);
+        }
+
+        .stage05 #s05-decode-message {
+          margin: 2px 0 0;
+          color: var(--color-danger, #b83b3b);
+          font-size: var(--font-size-sm, 0.875rem);
+          overflow-wrap: anywhere;
+        }
+
+        .s05-output {
+          min-height: 0;
+          margin: 0;
+          padding: 10px 12px;
+          border: 1px solid var(--color-border, #deded8);
+          border-radius: var(--radius-sm, 4px);
+          background: var(--color-surface-muted, #f0f0ed);
+          color: var(--color-text, #242424);
+          font-family: var(--font-mono, monospace);
+          font-size: var(--font-size-sm, 0.875rem);
+          overflow-wrap: anywhere;
+        }
+
+        .s05-output:empty {
           display: none;
         }
 
-        .stage05 .s05-decoder button {
-          width: 100%;
+        .stage05 #s05-url-hint {
+          margin: 4px 0 0;
+          color: var(--color-text-secondary, #777771);
+          font-size: var(--font-size-sm, 0.875rem);
+          overflow-wrap: anywhere;
         }
 
-        /* Corrupted overflow tile */
+        .s05-hidden {
+          display: none !important;
+        }
+
+        .s05-notice {
+          padding: 12px;
+          border: 1px solid var(--color-border, #deded8);
+          border-radius: var(--radius-sm, 4px);
+        }
 
         .s05-tile[data-overflow="true"] {
           z-index: 10;
@@ -573,104 +645,102 @@ function render() {
         .s05-tile[data-overflow="true"] .s05-tile-face {
           position: relative;
           overflow: hidden;
-          color: #8bffb0 !important;
+          border: 1px solid #39ff88;
           background:
             repeating-linear-gradient(
               0deg,
-              rgba(0, 255, 100, 0.12) 0,
-              rgba(0, 255, 100, 0.12) 1px,
+              rgb(0 255 100 / 12%) 0,
+              rgb(0 255 100 / 12%) 1px,
               transparent 1px,
               transparent 4px
             ),
             #050907 !important;
-          border: 1px solid #39ff88;
+          color: #8bffb0 !important;
           box-shadow:
-            0 0 8px rgba(57, 255, 136, 0.8),
-            0 0 24px rgba(57, 255, 136, 0.45),
-            inset 0 0 16px rgba(57, 255, 136, 0.2);
+            0 0 8px rgb(57 255 136 / 65%),
+            inset 0 0 12px rgb(57 255 136 / 16%);
         }
 
         .s05-tile[data-overflow="true"] .s05-tile-face::after {
-          content: "";
           position: absolute;
           inset: -100% 0;
-          pointer-events: none;
           background: linear-gradient(
             transparent 40%,
-            rgba(57, 255, 136, 0.5) 50%,
+            rgb(57 255 136 / 45%) 50%,
             transparent 60%
           );
+          content: "";
+          pointer-events: none;
           animation: s05-scan 1.2s linear infinite;
-        }
-
-        .s05-tile[data-overflow="true"][data-revealed="true"] {
-          animation: s05-reveal 450ms ease-out;
         }
 
         .s05-tile[data-overflow="true"][data-revealed="true"]
           .s05-tile-face {
           border-color: #b4ffd0;
           box-shadow:
-            0 0 12px rgba(57, 255, 136, 0.9),
-            0 0 32px rgba(57, 255, 136, 0.6),
-            inset 0 0 22px rgba(57, 255, 136, 0.3);
+            0 0 12px rgb(57 255 136 / 75%),
+            inset 0 0 18px rgb(57 255 136 / 25%);
         }
 
         @keyframes s05-glitch {
-          0% {
-            filter: hue-rotate(0deg) brightness(1);
-          }
-          25% {
-            filter: hue-rotate(35deg) brightness(1.5);
-          }
-          50% {
-            filter: brightness(0.7);
-          }
-          75% {
-            filter: hue-rotate(-25deg) brightness(1.3);
-          }
-          100% {
-            filter: brightness(1);
-          }
+          0% { filter: brightness(1); }
+          25% { filter: hue-rotate(25deg) brightness(1.25); }
+          50% { filter: brightness(0.8); }
+          75% { filter: hue-rotate(-20deg) brightness(1.15); }
+          100% { filter: brightness(1); }
         }
 
         @keyframes s05-scan {
-          from {
-            transform: translateY(-50%);
-          }
-          to {
-            transform: translateY(100%);
-          }
+          from { transform: translateY(-50%); }
+          to { transform: translateY(100%); }
         }
 
-        @keyframes s05-reveal {
-          0% {
-            filter: brightness(4);
-            transform: scale(0.9);
+        @media (max-width: 680px) {
+          .stage05 .s05-panel {
+            padding: 16px;
           }
-          45% {
-            filter: brightness(0.4);
-            transform: scale(1.08);
-          }
-          100% {
-            filter: brightness(1);
-            transform: scale(1);
-          }
-        }
 
-        @media (min-width: 680px) {
+          .stage05 h1 {
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+          }
+
           .s05-layout {
-            grid-template-columns:
-              minmax(0, 1.15fr)
-              minmax(230px, 0.85fr);
+            grid-template-columns: minmax(0, 1fr);
+            gap: 28px;
+          }
+
+          .s05-decoder {
+            padding: 22px 0 0;
+            border-top: 1px solid var(--color-border, #deded8);
+            border-left: 0;
+          }
+
+          .s05-decoder h2 {
+            padding-bottom: 12px;
+          }
+
+          .s05-toolbar {
+            justify-content: flex-start;
+          }
+
+          .s05-board-wrap {
+            max-width: 460px;
+          }
+
+          .s05-cell {
+            padding: 3px;
+          }
+
+          .s05-decoder input {
+            font-size: 16px;
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .s05-tile[data-overflow="true"],
-          .s05-tile[data-overflow="true"]
-            .s05-tile-face::after {
-            animation: none;
+          .s05-tile[data-overflow="true"] .s05-tile-face::after {
+            animation: none !important;
           }
         }
       </style>
@@ -710,6 +780,7 @@ function render() {
                   class="s05-board"
                   role="application"
                   aria-label="2048"
+                  tabindex="0"
                 >
                   <div class="s05-grid" aria-hidden="true">
                     ${Array.from(
@@ -725,10 +796,7 @@ function render() {
                 </div>
               </div>
 
-              <p
-                id="s05-game-message"
-                aria-live="polite"
-              ></p>
+              <p id="s05-game-message" aria-live="polite"></p>
             </div>
           </div>
 
@@ -749,22 +817,10 @@ function render() {
               placeholder="${t("keyPlaceholder")}"
             />
 
-            <button
-              id="s05-decode"
-              class="btn"
-              type="button"
-            >${t("decode")}</button>
+            <button id="s05-decode" type="button">${t("decode")}</button>
 
-            <p
-              id="s05-decode-message"
-              aria-live="polite"
-            ></p>
-
-            <p
-              id="s05-decode-output"
-              class="s05-output"
-            ></p>
-
+            <p id="s05-decode-message" aria-live="polite"></p>
+            <p id="s05-decode-output" class="s05-output"></p>
             <p id="s05-url-hint" class="s05-hidden"></p>
           </div>
         </div>
@@ -787,15 +843,8 @@ function render() {
   const layer = root.querySelector("#s05-tile-layer");
 
   for (const tile of board) {
-    let element = layer.querySelector(
-      `.s05-tile[data-id="${tile.id}"]`
-    );
-
-    if (!element) {
-      element = makeTileElement(tile);
-      layer.appendChild(element);
-    }
-
+    const element = makeTileElement(tile);
+    layer.appendChild(element);
     renderTile(tile);
   }
 
@@ -806,9 +855,7 @@ function render() {
     .addEventListener("click", decrypt);
 
   const boardElement = root.querySelector("#s05-board");
-
   boardElement.addEventListener("keydown", onKeydown);
-  boardElement.tabIndex = 0;
 
   let touchStart = null;
 
@@ -956,19 +1003,13 @@ function move(direction) {
       if (direction === "left") {
         row = i;
         col = j;
-      }
-
-      if (direction === "right") {
+      } else if (direction === "right") {
         row = i;
         col = SIZE - 1 - j;
-      }
-
-      if (direction === "up") {
+      } else if (direction === "up") {
         row = j;
         col = i;
-      }
-
-      if (direction === "down") {
+      } else {
         row = SIZE - 1 - j;
         col = i;
       }
@@ -1001,20 +1042,15 @@ function move(direction) {
       if (
         next &&
         !next.special &&
-        (
-          !ruleChanged
-            ? current.value === next.value
-            : true
-        )
+        (!ruleChanged
+          ? current.value === next.value
+          : true)
       ) {
         const product = ruleChanged
           ? current.value * next.value
           : current.value * 2;
 
-        if (
-          !Number.isFinite(product) ||
-          product > MAX_INT32
-        ) {
+        if (!Number.isFinite(product) || product > MAX_INT32) {
           current.value = MAX_INT32;
           current.special = true;
           current.revealed = false;
@@ -1056,31 +1092,24 @@ function move(direction) {
       }
     }
 
-    for (let j = 0; j < line.length; j++) {
-      const cell = line[j];
+    for (let j = 0; j < output.length; j++) {
       const tile = output[j];
+      const cell = line[j];
 
-      if (!tile) continue;
-
-      if (
-        tile.row !== cell.row ||
-        tile.col !== cell.col
-      ) {
+      if (tile.row !== cell.row || tile.col !== cell.col) {
         changed = true;
       }
 
       tile.row = cell.row;
       tile.col = cell.col;
     }
+
+    if (overflowLocked) break;
   }
 
   if (!changed) {
-    if (
-      board.length >= SIZE * SIZE &&
-      !canMove()
-    ) {
+    if (board.length >= SIZE * SIZE && !canMove()) {
       gameOver = true;
-
       root.querySelector("#s05-game-message").textContent =
         t("gameOver");
     }
@@ -1097,7 +1126,6 @@ function move(direction) {
     if (!liveIds.has(element.dataset.id)) {
       element.style.opacity = "0";
       element.style.transform += " scale(0.85)";
-
       setTimeout(() => element.remove(), 130);
     }
   }
@@ -1115,8 +1143,6 @@ function move(direction) {
     renderTile(tile);
   }
 
-  // Once overflow occurs, stop the game immediately:
-  // no new tiles and no further movement.
   if (!overflowLocked) {
     spawnTile();
   }
@@ -1124,7 +1150,6 @@ function move(direction) {
   updateScore();
 
   if (rulePaused) {
-    // No duplicate rule popup. Narration alone announces the change.
     rulePaused = false;
 
     speak(
@@ -1140,7 +1165,6 @@ function move(direction) {
     !canMove()
   ) {
     gameOver = true;
-
     root.querySelector("#s05-game-message").textContent =
       t("gameOver");
   }
@@ -1175,10 +1199,7 @@ function canMove() {
         if (!next) return true;
         if (current.special || next.special) continue;
 
-        if (
-          ruleChanged ||
-          current.value === next.value
-        ) {
+        if (ruleChanged || current.value === next.value) {
           return true;
         }
       }
@@ -1216,14 +1237,7 @@ function mount(container) {
   Narrator.setStage(5);
   resetBoard();
 
-  const url = new URL(window.location.href);
-  const key = (url.searchParams.get("key") || "")
-    .trim()
-    .toUpperCase();
-
-  if (key === TARGET) {
-    checkUnlockFromUrl();
-  }
+  checkUnlockFromUrl();
 }
 
 function unmount() {
