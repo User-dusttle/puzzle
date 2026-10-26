@@ -8,26 +8,25 @@
 
   <title>页面未找到 | Help Center</title>
 
-  <script>
-    (function () {
-      const path = location.pathname;
-      const search = location.search;
-      const hash = location.hash;
+  
+<script>
+(function () {
+  const path = location.pathname;
+  const search = location.search;
+  const hash = location.hash;
 
-      // Avoid redirect loops if the requested page is already the entry.
-      if (path.endsWith("/404.html")) {
-        return;
-      }
+  if (path.endsWith("/404.html")) {
+    return;
+  }
 
-      // Preserve the requested URL for the app router.
-      const requested = path + search + hash;
-      const destination = new URL("./", location.href);
+  const requested = path + search + hash;
+  const destination = new URL("/puzzle/Game/", location.origin);
 
-      destination.searchParams.set("p", requested);
+  destination.searchParams.set("p", requested);
+  location.replace(destination.href);
+})();
+</script>
 
-      location.replace(destination.href);
-    })();
-  </script>
 </head>
 
 <body>
