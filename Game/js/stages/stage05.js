@@ -121,8 +121,33 @@ function t(key) {
   return translations[lang()][key];
 }
 
-function speak(zh, en, mood = "normal") {
-  Narrator.speakCustom({ "zh-CN": zh, en }, mood);
+function speak(zh, en, mood = "neutral") {
+  const validMoods = new Set([
+    "neutral",
+    "pleased",
+    "annoyed",
+    "suspicious",
+    "impressed",
+    "embarrassed",
+    "concerned",
+  ]);
+
+  const moodMap = {
+    normal: "neutral",
+    shocked: "concerned",
+    curious: "suspicious",
+    smug: "pleased",
+  };
+
+  const normalizedMood = moodMap[mood] || mood;
+  const safeMood = validMoods.has(normalizedMood)
+    ? normalizedMood
+    : "neutral";
+
+  Narrator.speakCustom(
+    { "zh-CN": zh, en },
+    safeMood
+  );
 }
 
 function newTile(value, row, col, special = false) {
