@@ -7,6 +7,7 @@
  *   - GitHub Pages project sites
  *   - Client-side navigation
  *   - Browser back / forward
+ *   - GitHub Pages 404 route recovery
  * ========================================================= */
 
 const Router = (() => {
@@ -46,12 +47,68 @@ const Router = (() => {
     return `${clean}/`;
   }
 
+  // -------------------------------------------------------
+  // GitHub Pages 404 recovery
+  // -------------------------------------------------------
+
+  function recover404Path() {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("p");
+
+    if (!requested) {
+      return;
+    }
+
+    // Accept only a same-origin absolute path.
+    if (
+      !requested.startsWith("/") ||
+      requested.startsWith("//") ||
+      requested.includes("\\")
+    ) {
+      return;
+    }
+
+    const recovered = new URL(requested, window.location.origin);
+
+    if (recovered.origin !== window.location.origin) {
+      return;
+    }
+
+    const path = recovered.pathname;
+
+    // This project is published at /puzzle/Game/.
+    // Do not recover paths outside this app.
+    if (
+      path !== "/puzzle/Game" &&
+      !path.startsWith("/puzzle/Game/")
+    ) {
+      return;
+    }
+
+    // Restore the original URL before route resolution.
+    // Preserve the original query string and hash.
+    window.history.replaceState(
+      {},
+      "",
+      path + recovered.search + recovered.hash
+    );
+  }
+
+  // -------------------------------------------------------
+  // Base path configuration
+  // -------------------------------------------------------
+
   function configure(options = {}) {
+    // Recover the original route before detecting the base path.
+    recover404Path();
+
     if (options.basePath) {
       basePath = normalizePath(options.basePath);
+
       if (!basePath.endsWith("/")) {
         basePath += "/";
       }
+
       return basePath;
     }
 
@@ -61,24 +118,36 @@ const Router = (() => {
     // GitHub Pages project sites:
     // https://username.github.io/repository/
     //
-    // Custom domains and localhost use "/".
-    if (
-      hostname.endsWith(".github.io") &&
-      !/^\/?$/.test(pathname)
-    ) {
+    // For this project:
+    // https://user-dusttle.github.io/puzzle/Game/
+    //
+    // The app root is /puzzle/Game/, not /puzzle/.
+
+    if (hostname.endsWith(".github.io")) {
       const segments = pathname.split("/").filter(Boolean);
 
-      // When the page is opened under a repository directory,
-      // the first path segment is the repository name.
-      basePath = segments.length > 0
-        ? `/${segments[0]}/`
-        : "/";
+      if (
+        segments.length >= 2 &&
+        segments[0] === "puzzle" &&
+        segments[1] === "Game"
+      ) {
+        basePath = "/puzzle/Game/";
+      } else if (segments.length > 0) {
+        basePath = `/${segments[0]}/`;
+      } else {
+        basePath = "/";
+      }
     } else {
+      // Local Python server or custom domain.
       basePath = "/";
     }
 
     return basePath;
   }
+
+  // -------------------------------------------------------
+  // URL conversion
+  // -------------------------------------------------------
 
   /**
    * Turn an app-relative route into a browser pathname.
@@ -195,34 +264,34 @@ const Router = (() => {
   // Client-side navigation
   // -------------------------------------------------------
 
-  
+  function navigate(route, options = {}) {
+    const target = toUrl(route);
+    const url = new URL(target, window.location.origin);
 
-function navigate(route, options = {}) {
-  const target = toUrl(route);
-  const url = new URL(target, window.location.origin);
-
-  if (options.query && typeof options.query === "object") {
-    for (const [key, value] of Object.entries(options.query)) {
-      if (value !== undefined && value !== null) {
-        url.searchParams.set(key, String(value));
+    if (options.query && typeof options.query === "object") {
+      for (const [key, value] of Object.entries(options.query)) {
+        if (value !== undefined && value !== null) {
+          url.searchParams.set(key, String(value));
+        }
       }
     }
+
+    if (options.hash) {
+      url.hash = options.hash;
+    }
+
+    if (options.replace) {
+      window.history.replaceState({}, "", url.href);
+    } else {
+      window.history.pushState({}, "", url.href);
+    }
+
+    window.dispatchEvent(new PopStateEvent("popstate"));
   }
 
-  if (options.hash) {
-    url.hash = options.hash;
-  }
-
-  if (options.replace) {
-    window.history.replaceState({}, "", url.href);
-  } else {
-    window.history.pushState({}, "", url.href);
-  }
-
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
-
+  // -------------------------------------------------------
+  // Utilities
+  // -------------------------------------------------------
 
   function stageUrl(number) {
     if (
@@ -258,4 +327,3 @@ function navigate(route, options = {}) {
 })();
 
 export default Router;
-
