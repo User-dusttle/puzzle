@@ -8,7 +8,7 @@ import Router from "../router.js";
 import Progress from "../progress.js";
 
 const SIZE = 4;
-const TARGET = "STAGE06_OPEN";
+const TARGET = "SATWA06_AHJZ";
 const CIPHER = "RGGTR06_LGPM";
 const SECRET_KEY = "m3ta_key";
 const OFFSET = 13;
