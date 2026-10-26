@@ -1,5 +1,7 @@
+
 const DEBUG = new URLSearchParams(window.location.search)
   .get("debug") === "1";
+
 import I18n from "../i18n.js";
 import Narrator from "../narrator.js";
 import Router from "../router.js";
@@ -19,6 +21,7 @@ let gameOver = false;
 let ruleChanged = false;
 let rulePaused = false;
 let overflowFound = false;
+let overflowLocked = false;
 let decoderOpen = false;
 let decoded = "";
 let mounted = false;
@@ -40,17 +43,25 @@ const translations = {
     continue: "继续",
     gameOver: "没有可用的移动了。",
     ruleTitle: "规则更新",
-    ruleText: "规则改了：相同数值不再是合并条件，现在两个方块相撞就会相乘。别问为什么，我也不想知道。",
-    ruleTextEn: "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
-    overflowHint: "等等……这个数值已经超过了变量能表示的范围？这不应该啊。",
-    secretHint: "你找到了一个隐藏值。记下来，别让我再说第二遍。",
+    ruleText:
+      "规则改了：相同数值不再是合并条件，现在两个方块相撞就会相乘。别问为什么，我也不想知道。",
+    ruleTextEn:
+      "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
+    overflowHint:
+      "等等……这个数值已经超过了变量能表示的范围？这不应该啊。",
+    secretHint:
+      "你找到了一个隐藏值。记下来，别让我再说第二遍。",
     secretFound: "已获得隐藏秘钥。",
-    solvedHint: "这是什么？你或许可以在某串东西后面输入 ?key=解密后的串 试试看？",
-    solvedHintEn: "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
-    urlHelp: "解密成功并不代表通关。试着把结果作为 key 参数附加到第五关的 URL。",
+    solvedHint:
+      "这是什么？你或许可以在某串东西后面输入 ?key=解密后的串 试试看？",
+    solvedHintEn:
+      "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
+    urlHelp:
+      "解密成功并不代表通关。试着把结果作为 key 参数附加到第五关的 URL。",
     close: "关闭",
     overflowTile: "黑色方块",
-    instructions: "使用方向键或 WASD 移动方块。触屏设备可以滑动棋盘。",
+    instructions:
+      "使用方向键或 WASD 移动方块。触屏设备可以滑动棋盘。",
   },
   en: {
     title: "Laboratory",
@@ -68,17 +79,25 @@ const translations = {
     continue: "Continue",
     gameOver: "No moves remain.",
     ruleTitle: "Rule update",
-    ruleText: "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
-    ruleTextEn: "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
-    overflowHint: "Wait... that value is beyond the range this variable can represent? That shouldn't happen.",
-    secretHint: "You found a hidden value. Write it down. Don't make me say it twice.",
+    ruleText:
+      "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
+    ruleTextEn:
+      "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
+    overflowHint:
+      "Wait... that value is beyond the range this variable can represent? That shouldn't happen.",
+    secretHint:
+      "You found a hidden value. Write it down. Don't make me say it twice.",
     secretFound: "Hidden key acquired.",
-    solvedHint: "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
-    solvedHintEn: "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
-    urlHelp: "Successful decryption doesn't mean you've finished. Try adding the result as a key parameter to the Stage 5 URL.",
+    solvedHint:
+      "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
+    solvedHintEn:
+      "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
+    urlHelp:
+      "Successful decryption doesn't mean you've finished. Try adding the result as a key parameter to the Stage 5 URL.",
     close: "Close",
     overflowTile: "Black tile",
-    instructions: "Use the arrow keys or WASD to move. On touch devices, swipe the board.",
+    instructions:
+      "Use the arrow keys or WASD to move. On touch devices, swipe the board.",
   },
 };
 
@@ -113,27 +132,35 @@ function resetBoard() {
   ruleChanged = false;
   rulePaused = false;
   overflowFound = false;
+  overflowLocked = false;
   decoderOpen = false;
   decoded = "";
 
   spawnTile();
   spawnTile();
+
   if (DEBUG) {
-  board = [
-    newTile(1024, 0, 0),
-    newTile(1024, 0, 1),
-  ];
-}
+    board = [
+      newTile(1024, 0, 0),
+      newTile(1024, 0, 1),
+    ];
+  }
+
   render();
 }
 
 function emptyCells() {
-  const occupied = new Set(board.map(tile => tile.row * SIZE + tile.col));
+  const occupied = new Set(
+    board.map(tile => tile.row * SIZE + tile.col)
+  );
+
   const result = [];
 
   for (let row = 0; row < SIZE; row++) {
     for (let col = 0; col < SIZE; col++) {
-      if (!occupied.has(row * SIZE + col)) result.push({ row, col });
+      if (!occupied.has(row * SIZE + col)) {
+        result.push({ row, col });
+      }
     }
   }
 
@@ -142,7 +169,7 @@ function emptyCells() {
 
 function spawnTile() {
   const cells = emptyCells();
-  if (!cells.length) return null;
+  if (!cells.length || overflowLocked) return null;
 
   const cell = cells[Math.floor(Math.random() * cells.length)];
   const value = Math.random() < 0.9 ? 2 : 4;
@@ -153,7 +180,7 @@ function spawnTile() {
 }
 
 function colorFor(value, special) {
-  if (special) return "#111111";
+  if (special) return "#050907";
 
   const colors = {
     2: "#eee4da",
@@ -219,6 +246,7 @@ function makeTileElement(tile) {
 
   element.addEventListener("click", () => {
     const current = board.find(item => item.id === tile.id);
+
     if (!current || !current.special || current.revealed) return;
 
     current.revealed = true;
@@ -229,13 +257,36 @@ function makeTileElement(tile) {
     faceElement.style.fontSize = "clamp(9px, 2.3vw, 15px)";
     faceElement.style.color = "#8bffb0";
     faceElement.style.letterSpacing = "0.03em";
+
     element.setAttribute("aria-label", "Hidden key");
+    element.dataset.revealed = "true";
 
     overflowFound = true;
-    speak(
-      "你找到了一个隐藏值。记下来，别让我再说第二遍。",
-      "You found a hidden value. Write it down. Don't make me say it twice.",
-      "surprised"
+
+    // Reveal the secret with a brief glitch animation.
+    // Deliberately do not interrupt the player with narration.
+    faceElement.animate(
+      [
+        {
+          opacity: 0,
+          filter: "brightness(3) hue-rotate(90deg)",
+          transform: "scale(0.85)",
+        },
+        {
+          opacity: 1,
+          filter: "brightness(0.4)",
+          transform: "scale(1.08)",
+        },
+        {
+          opacity: 1,
+          filter: "brightness(1)",
+          transform: "scale(1)",
+        },
+      ],
+      {
+        duration: 450,
+        easing: "steps(4, end)",
+      }
     );
   });
 
@@ -246,6 +297,7 @@ function renderTile(tile) {
   const element = root?.querySelector(
     `.s05-tile[data-id="${tile.id}"]`
   );
+
   if (!element) return;
 
   const face = element.querySelector(".s05-tile-face");
@@ -269,6 +321,18 @@ function renderTile(tile) {
     ? "#8bffb0"
     : textColor(tile.value, tile.special);
 
+  if (tile.special) {
+    element.dataset.overflow = "true";
+    element.dataset.revealed = String(tile.revealed);
+    element.setAttribute(
+      "aria-label",
+      tile.revealed ? "Hidden key" : t("overflowTile")
+    );
+  } else {
+    delete element.dataset.overflow;
+    delete element.dataset.revealed;
+  }
+
   positionTile(element, tile);
 
   if (tile.merged) {
@@ -278,8 +342,12 @@ function renderTile(tile) {
         { transform: "scale(1.07)" },
         { transform: "scale(1)" },
       ],
-      { duration: 150, easing: "ease-out" }
+      {
+        duration: 150,
+        easing: "ease-out",
+      }
     );
+
     tile.merged = false;
   }
 }
@@ -293,26 +361,36 @@ function render() {
         .s05-layout {
           display: grid;
           grid-template-columns: minmax(0, 1fr);
-          gap: 18px;
-          max-width: 760px;
+          gap: 22px;
+          max-width: 800px;
           margin: 0 auto;
         }
-        .s05-panel { min-width: 0; }
+
+        .s05-panel {
+          min-width: 0;
+        }
+
         .s05-board-wrap {
           width: 100%;
           max-width: 460px;
           margin: 0 auto;
         }
+
         .s05-board {
           position: relative;
           width: 100%;
           aspect-ratio: 1 / 1;
           overflow: hidden;
-          border-radius: 8px;
+          border-radius: 12px;
           background: #bbada0;
           touch-action: none;
           user-select: none;
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          box-shadow:
+            0 12px 32px rgba(0, 0, 0, 0.13),
+            inset 0 0 0 1px rgba(0, 0, 0, 0.05);
         }
+
         .s05-grid {
           position: absolute;
           inset: 0;
@@ -323,70 +401,283 @@ function render() {
           padding: 0;
           pointer-events: none;
         }
+
         .s05-cell {
           min-width: 0;
           min-height: 0;
           padding: 5px;
           box-sizing: border-box;
         }
+
         .s05-cell::before {
           content: "";
           display: block;
           width: 100%;
           height: 100%;
           background: rgba(238, 228, 218, 0.35);
-          border-radius: 5px;
+          border-radius: 6px;
         }
+
         .s05-tile-layer {
           position: absolute;
           inset: 0;
         }
+
+        .s05-tile {
+          outline-offset: -3px;
+        }
+
+        .s05-tile:focus-visible {
+          outline: 2px solid #39ff88;
+          z-index: 20;
+        }
+
         .s05-tile-face {
           overflow: hidden;
           overflow-wrap: anywhere;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
         }
+
         .s05-toolbar {
           display: flex;
           justify-content: space-between;
           align-items: center;
           gap: 10px;
           flex-wrap: wrap;
+          margin-bottom: 14px;
         }
+
         .s05-decoder {
           display: grid;
-          gap: 10px;
+          align-content: start;
+          gap: 12px;
+          min-width: 0;
+          padding: 20px;
+          border: 1px solid var(--border, #ddd);
+          border-radius: 12px;
+          background:
+            linear-gradient(
+              145deg,
+              rgba(120, 150, 130, 0.07),
+              rgba(120, 150, 130, 0.015)
+            );
         }
+
+        .s05-decoder h2 {
+          margin-top: 0;
+          padding-bottom: 12px;
+          border-bottom: 1px solid var(--border, #ddd);
+        }
+
+        .s05-decoder label {
+          font-size: 0.9rem;
+          font-weight: 650;
+          opacity: 0.85;
+        }
+
         .s05-decoder input {
           box-sizing: border-box;
           width: 100%;
           min-width: 0;
+          padding: 12px;
+          border: 1px solid var(--border, #ccc);
+          border-radius: 8px;
+          background: var(--input-bg, transparent);
+          transition:
+            border-color 160ms ease,
+            box-shadow 160ms ease;
         }
+
+        .s05-decoder input:focus {
+          outline: none;
+          border-color: #37a76b;
+          box-shadow: 0 0 0 3px rgba(55, 167, 107, 0.14);
+        }
+
         .s05-output {
+          min-height: 1.5em;
+          padding: 12px;
           overflow-wrap: anywhere;
+          border-radius: 8px;
+          background: rgba(128, 128, 128, 0.07);
           font-family: var(--mono, monospace);
         }
+
+        .s05-hidden {
+          display: none !important;
+        }
+
+        .s05-score {
+          display: inline-block;
+          padding: 8px 12px;
+          border: 1px solid rgba(120, 150, 130, 0.2);
+          border-radius: 8px;
+          background: rgba(120, 150, 130, 0.1);
+          font-variant-numeric: tabular-nums;
+        }
+
+        .s05-game-content[hidden] {
+          display: none !important;
+        }
+
         .s05-notice {
           padding: 12px;
           border: 1px solid var(--border, #888);
           border-radius: 8px;
         }
-        .s05-hidden { display: none !important; }
-        .s05-score {
-          display: inline-block;
-          padding: 7px 12px;
-          border-radius: 6px;
-          background: var(--bg, #eee);
+
+        /* Laboratory visual treatment */
+
+        .stage05 {
+          position: relative;
         }
-        .s05-game-content[hidden] {
-          display: none !important;
+
+        .stage05 .card {
+          position: relative;
+          overflow: hidden;
+          border: 1px solid rgba(120, 150, 130, 0.28);
+          border-radius: 16px;
+          background:
+            radial-gradient(
+              ellipse at 8% 0%,
+              rgba(50, 180, 110, 0.09),
+              transparent 42%
+            ),
+            var(--card-bg, #fff);
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
         }
+
+        .stage05 h1 {
+          letter-spacing: 0.04em;
+        }
+
+        .stage05 .s05-board {
+          background: #b7aa9e;
+        }
+
+        .stage05 .s05-output:empty {
+          display: none;
+        }
+
+        .stage05 .s05-decoder button {
+          width: 100%;
+        }
+
+        /* Corrupted overflow tile */
+
+        .s05-tile[data-overflow="true"] {
+          z-index: 10;
+          animation: s05-glitch 180ms steps(2, end) infinite;
+        }
+
+        .s05-tile[data-overflow="true"] .s05-tile-face {
+          position: relative;
+          overflow: hidden;
+          color: #8bffb0 !important;
+          background:
+            repeating-linear-gradient(
+              0deg,
+              rgba(0, 255, 100, 0.12) 0,
+              rgba(0, 255, 100, 0.12) 1px,
+              transparent 1px,
+              transparent 4px
+            ),
+            #050907 !important;
+          border: 1px solid #39ff88;
+          box-shadow:
+            0 0 8px rgba(57, 255, 136, 0.8),
+            0 0 24px rgba(57, 255, 136, 0.45),
+            inset 0 0 16px rgba(57, 255, 136, 0.2);
+        }
+
+        .s05-tile[data-overflow="true"] .s05-tile-face::after {
+          content: "";
+          position: absolute;
+          inset: -100% 0;
+          pointer-events: none;
+          background: linear-gradient(
+            transparent 40%,
+            rgba(57, 255, 136, 0.5) 50%,
+            transparent 60%
+          );
+          animation: s05-scan 1.2s linear infinite;
+        }
+
+        .s05-tile[data-overflow="true"][data-revealed="true"] {
+          animation: s05-reveal 450ms ease-out;
+        }
+
+        .s05-tile[data-overflow="true"][data-revealed="true"]
+          .s05-tile-face {
+          border-color: #b4ffd0;
+          box-shadow:
+            0 0 12px rgba(57, 255, 136, 0.9),
+            0 0 32px rgba(57, 255, 136, 0.6),
+            inset 0 0 22px rgba(57, 255, 136, 0.3);
+        }
+
+        @keyframes s05-glitch {
+          0% {
+            filter: hue-rotate(0deg) brightness(1);
+          }
+          25% {
+            filter: hue-rotate(35deg) brightness(1.5);
+          }
+          50% {
+            filter: brightness(0.7);
+          }
+          75% {
+            filter: hue-rotate(-25deg) brightness(1.3);
+          }
+          100% {
+            filter: brightness(1);
+          }
+        }
+
+        @keyframes s05-scan {
+          from {
+            transform: translateY(-50%);
+          }
+          to {
+            transform: translateY(100%);
+          }
+        }
+
+        @keyframes s05-reveal {
+          0% {
+            filter: brightness(4);
+            transform: scale(0.9);
+          }
+          45% {
+            filter: brightness(0.4);
+            transform: scale(1.08);
+          }
+          100% {
+            filter: brightness(1);
+            transform: scale(1);
+          }
+        }
+
         @media (min-width: 680px) {
-          .s05-layout { grid-template-columns: minmax(0, 1.15fr) minmax(230px, .85fr); }
+          .s05-layout {
+            grid-template-columns:
+              minmax(0, 1.15fr)
+              minmax(230px, 0.85fr);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .s05-tile[data-overflow="true"],
+          .s05-tile[data-overflow="true"]
+            .s05-tile-face::after {
+            animation: none;
+          }
         }
       </style>
 
       <div class="card s05-panel">
         <h1>${t("title")}</h1>
+
         <div class="s05-layout">
           <div>
             <div class="s05-toolbar">
@@ -397,41 +688,83 @@ function render() {
                 aria-expanded="false"
                 aria-controls="s05-game-content"
               >${t("gameTitle")} ＋</button>
-              <div class="s05-score">${t("score")}: <strong id="s05-score">0</strong></div>
-              <button id="s05-restart" class="btn btn-ghost" type="button">${t("restart")}</button>
+
+              <div class="s05-score">
+                ${t("score")}:
+                <strong id="s05-score">0</strong>
+              </div>
+
+              <button
+                id="s05-restart"
+                class="btn btn-ghost"
+                type="button"
+              >${t("restart")}</button>
             </div>
 
             <div id="s05-game-content" class="s05-game-content" hidden>
               <p>${t("instructions")}</p>
 
               <div class="s05-board-wrap">
-                <div id="s05-board" class="s05-board" role="application" aria-label="2048">
+                <div
+                  id="s05-board"
+                  class="s05-board"
+                  role="application"
+                  aria-label="2048"
+                >
                   <div class="s05-grid" aria-hidden="true">
-                    ${Array.from({ length: 16 }, () => '<div class="s05-cell"></div>').join("")}
+                    ${Array.from(
+                      { length: 16 },
+                      () => '<div class="s05-cell"></div>'
+                    ).join("")}
                   </div>
-                  <div id="s05-tile-layer" class="s05-tile-layer"></div>
+
+                  <div
+                    id="s05-tile-layer"
+                    class="s05-tile-layer"
+                  ></div>
                 </div>
               </div>
 
-              <div id="s05-rule-notice" class="s05-notice s05-hidden">
-                <h3>${t("ruleTitle")}</h3>
-                <p>${t("ruleText")}</p>
-                <button id="s05-rule-continue" class="btn" type="button">${t("continue")}</button>
-              </div>
-
-              <p id="s05-game-message" aria-live="polite"></p>
+              <p
+                id="s05-game-message"
+                aria-live="polite"
+              ></p>
             </div>
           </div>
 
           <div class="s05-decoder">
             <h2>${t("decoderTitle")}</h2>
+
             <label for="s05-cipher">${t("cipherLabel")}</label>
-            <input id="s05-cipher" autocomplete="off" placeholder="${t("decodePlaceholder")}" />
+            <input
+              id="s05-cipher"
+              autocomplete="off"
+              placeholder="${t("decodePlaceholder")}"
+            />
+
             <label for="s05-key">${t("keyLabel")}</label>
-            <input id="s05-key" autocomplete="off" placeholder="${t("keyPlaceholder")}" />
-            <button id="s05-decode" class="btn" type="button">${t("decode")}</button>
-            <p id="s05-decode-message" aria-live="polite"></p>
-            <p id="s05-decode-output" class="s05-output"></p>
+            <input
+              id="s05-key"
+              autocomplete="off"
+              placeholder="${t("keyPlaceholder")}"
+            />
+
+            <button
+              id="s05-decode"
+              class="btn"
+              type="button"
+            >${t("decode")}</button>
+
+            <p
+              id="s05-decode-message"
+              aria-live="polite"
+            ></p>
+
+            <p
+              id="s05-decode-output"
+              class="s05-output"
+            ></p>
+
             <p id="s05-url-hint" class="s05-hidden"></p>
           </div>
         </div>
@@ -444,6 +777,7 @@ function render() {
 
   toggleButton.addEventListener("click", () => {
     const willOpen = gameContent.hidden;
+
     gameContent.hidden = !willOpen;
     toggleButton.setAttribute("aria-expanded", String(willOpen));
     toggleButton.textContent =
@@ -453,49 +787,57 @@ function render() {
   const layer = root.querySelector("#s05-tile-layer");
 
   for (const tile of board) {
-    let element = layer.querySelector(`.s05-tile[data-id="${tile.id}"]`);
+    let element = layer.querySelector(
+      `.s05-tile[data-id="${tile.id}"]`
+    );
+
     if (!element) {
       element = makeTileElement(tile);
       layer.appendChild(element);
     }
+
     renderTile(tile);
   }
 
-  root.querySelector("#s05-restart").addEventListener("click", resetBoard);
-  root.querySelector("#s05-decode").addEventListener("click", decrypt);
+  root.querySelector("#s05-restart")
+    .addEventListener("click", resetBoard);
+
+  root.querySelector("#s05-decode")
+    .addEventListener("click", decrypt);
 
   const boardElement = root.querySelector("#s05-board");
+
   boardElement.addEventListener("keydown", onKeydown);
   boardElement.tabIndex = 0;
 
   let touchStart = null;
+
   boardElement.addEventListener("touchstart", event => {
     const touch = event.changedTouches[0];
-    touchStart = { x: touch.clientX, y: touch.clientY };
+
+    touchStart = {
+      x: touch.clientX,
+      y: touch.clientY,
+    };
   }, { passive: true });
 
   boardElement.addEventListener("touchend", event => {
     if (!touchStart) return;
+
     const touch = event.changedTouches[0];
     const dx = touch.clientX - touchStart.x;
     const dy = touch.clientY - touchStart.y;
+
     touchStart = null;
 
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
-    move(Math.abs(dx) > Math.abs(dy)
-      ? (dx > 0 ? "right" : "left")
-      : (dy > 0 ? "down" : "up"));
-  }, { passive: true });
 
-  root.querySelector("#s05-rule-continue").addEventListener("click", () => {
-    rulePaused = false;
-    root.querySelector("#s05-rule-notice").classList.add("s05-hidden");
-    speak(
-      "好了，继续吧。别再抱怨规则了。",
-      "All right, carry on. Stop complaining about the rules.",
-      "smug"
+    move(
+      Math.abs(dx) > Math.abs(dy)
+        ? (dx > 0 ? "right" : "left")
+        : (dy > 0 ? "down" : "up")
     );
-  });
+  }, { passive: true });
 
   updateScore();
   checkUnlockFromUrl();
@@ -534,7 +876,8 @@ function decrypt() {
   const urlHint = root.querySelector("#s05-url-hint");
 
   const cipher = cipherInput.value.trim().toUpperCase();
-  const key = keyInput.value.trim().toUpperCase().replace(/[^A-Z]/g, "");
+  const key = keyInput.value.trim().toUpperCase()
+    .replace(/[^A-Z]/g, "");
 
   if (!cipher || !key) {
     message.textContent = t("wrong");
@@ -551,6 +894,7 @@ function decrypt() {
       const c = char.charCodeAt(0) - 65;
       const k = key.charCodeAt(keyIndex % key.length) - 65;
       const p = ((c - k - OFFSET) % 26 + 26) % 26;
+
       result += String.fromCharCode(p + 65);
       keyIndex++;
     } else {
@@ -565,6 +909,7 @@ function decrypt() {
     message.textContent = "";
     urlHint.textContent = t("solvedHint");
     urlHint.classList.remove("s05-hidden");
+
     speak(
       "这是什么？你或许可以在某串东西后面输入 ?key=解密后的串 试试看？",
       "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
@@ -578,27 +923,25 @@ function decrypt() {
 
 function updateScore() {
   const scoreElement = root?.querySelector("#s05-score");
+
   if (scoreElement) {
     scoreElement.textContent = String(
-      board.reduce((sum, tile) => sum + (tile.special ? 0 : tile.value), 0)
+      board.reduce(
+        (sum, tile) => sum + (tile.special ? 0 : tile.value),
+        0
+      )
     );
   }
 }
 
 function move(direction) {
-  if (!root || gameOver || rulePaused) return;
-
-  const before = board.map(tile => ({
-    id: tile.id,
-    value: tile.value,
-    row: tile.row,
-    col: tile.col,
-    special: tile.special,
-    revealed: tile.revealed,
-  }));
+  if (!root || gameOver || rulePaused || overflowLocked) return;
 
   const occupied = new Map();
-  for (const tile of board) occupied.set(`${tile.row},${tile.col}`, tile);
+
+  for (const tile of board) {
+    occupied.set(`${tile.row},${tile.col}`, tile);
+  }
 
   let changed = false;
   const processed = new Set();
@@ -606,14 +949,33 @@ function move(direction) {
 
   for (let i = 0; i < SIZE; i++) {
     const line = [];
+
     for (let j = 0; j < SIZE; j++) {
       let row, col;
-      if (direction === "left") { row = i; col = j; }
-      if (direction === "right") { row = i; col = SIZE - 1 - j; }
-      if (direction === "up") { row = j; col = i; }
-      if (direction === "down") { row = SIZE - 1 - j; col = i; }
+
+      if (direction === "left") {
+        row = i;
+        col = j;
+      }
+
+      if (direction === "right") {
+        row = i;
+        col = SIZE - 1 - j;
+      }
+
+      if (direction === "up") {
+        row = j;
+        col = i;
+      }
+
+      if (direction === "down") {
+        row = SIZE - 1 - j;
+        col = i;
+      }
+
       line.push({ row, col });
     }
+
     lines.push(line);
   }
 
@@ -636,17 +998,30 @@ function move(direction) {
 
       const next = tiles[i + 1];
 
-      if (next && !next.special && (!ruleChanged
-          ? current.value === next.value
-          : true)) {
+      if (
+        next &&
+        !next.special &&
+        (
+          !ruleChanged
+            ? current.value === next.value
+            : true
+        )
+      ) {
         const product = ruleChanged
           ? current.value * next.value
           : current.value * 2;
 
-        if (!Number.isFinite(product) || product > MAX_INT32) {
+        if (
+          !Number.isFinite(product) ||
+          product > MAX_INT32
+        ) {
           current.value = MAX_INT32;
           current.special = true;
           current.revealed = false;
+
+          overflowLocked = true;
+          gameOver = true;
+
           output.push(current);
           processed.add(next.id);
           changed = true;
@@ -659,17 +1034,19 @@ function move(direction) {
               "shocked"
             );
           }
+
           continue;
         }
 
         current.value = product;
         current.merged = true;
+
         output.push(current);
         processed.add(next.id);
         changed = true;
         i += 2;
 
-        if (!ruleChanged && current.value >= 2048 && !ruleChanged) {
+        if (!ruleChanged && current.value >= 2048) {
           ruleChanged = true;
           rulePaused = true;
         }
@@ -682,19 +1059,32 @@ function move(direction) {
     for (let j = 0; j < line.length; j++) {
       const cell = line[j];
       const tile = output[j];
+
       if (!tile) continue;
 
-      if (tile.row !== cell.row || tile.col !== cell.col) changed = true;
+      if (
+        tile.row !== cell.row ||
+        tile.col !== cell.col
+      ) {
+        changed = true;
+      }
+
       tile.row = cell.row;
       tile.col = cell.col;
     }
   }
 
   if (!changed) {
-    if (board.length >= SIZE * SIZE && !canMove()) {
+    if (
+      board.length >= SIZE * SIZE &&
+      !canMove()
+    ) {
       gameOver = true;
-      root.querySelector("#s05-game-message").textContent = t("gameOver");
+
+      root.querySelector("#s05-game-message").textContent =
+        t("gameOver");
     }
+
     return;
   }
 
@@ -707,24 +1097,36 @@ function move(direction) {
     if (!liveIds.has(element.dataset.id)) {
       element.style.opacity = "0";
       element.style.transform += " scale(0.85)";
+
       setTimeout(() => element.remove(), 130);
     }
   }
 
   for (const tile of board) {
-    let element = layer.querySelector(`.s05-tile[data-id="${tile.id}"]`);
+    let element = layer.querySelector(
+      `.s05-tile[data-id="${tile.id}"]`
+    );
+
     if (!element) {
       element = makeTileElement(tile);
       layer.appendChild(element);
     }
+
     renderTile(tile);
   }
 
-  spawnTile();
+  // Once overflow occurs, stop the game immediately:
+  // no new tiles and no further movement.
+  if (!overflowLocked) {
+    spawnTile();
+  }
+
   updateScore();
 
   if (rulePaused) {
-    root.querySelector("#s05-rule-notice").classList.remove("s05-hidden");
+    // No duplicate rule popup. Narration alone announces the change.
+    rulePaused = false;
+
     speak(
       "规则改了：相同数值不再是合并条件，现在两个方块相撞就会相乘。别问为什么，我也不想知道。",
       "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
@@ -732,32 +1134,53 @@ function move(direction) {
     );
   }
 
-  if (board.length >= SIZE * SIZE && !canMove()) {
+  if (
+    !overflowLocked &&
+    board.length >= SIZE * SIZE &&
+    !canMove()
+  ) {
     gameOver = true;
-    root.querySelector("#s05-game-message").textContent = t("gameOver");
+
+    root.querySelector("#s05-game-message").textContent =
+      t("gameOver");
   }
 }
 
 function canMove() {
   if (emptyCells().length) return true;
 
-  const matrix = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
-  for (const tile of board) matrix[tile.row][tile.col] = tile;
+  const matrix = Array.from(
+    { length: SIZE },
+    () => Array(SIZE).fill(null)
+  );
+
+  for (const tile of board) {
+    matrix[tile.row][tile.col] = tile;
+  }
 
   for (let row = 0; row < SIZE; row++) {
     for (let col = 0; col < SIZE; col++) {
       const current = matrix[row][col];
+
       if (!current) return true;
 
       for (const [dr, dc] of [[1, 0], [0, 1]]) {
-        const nr = row + dr, nc = col + dc;
+        const nr = row + dr;
+        const nc = col + dc;
+
         if (nr >= SIZE || nc >= SIZE) continue;
 
         const next = matrix[nr][nc];
+
         if (!next) return true;
         if (current.special || next.special) continue;
 
-        if (ruleChanged || current.value === next.value) return true;
+        if (
+          ruleChanged ||
+          current.value === next.value
+        ) {
+          return true;
+        }
       }
     }
   }
@@ -769,11 +1192,19 @@ function checkUnlockFromUrl() {
   if (!root || !mounted) return;
 
   const url = new URL(window.location.href);
-  const key = (url.searchParams.get("key") || "").trim().toUpperCase();
+  const key = (url.searchParams.get("key") || "")
+    .trim()
+    .toUpperCase();
 
-  if (key !== TARGET || root.dataset.stage05Navigating === "1") return;
+  if (
+    key !== TARGET ||
+    root.dataset.stage05Navigating === "1"
+  ) {
+    return;
+  }
 
   root.dataset.stage05Navigating = "1";
+
   Progress.completeStage(5);
   Router.navigate(Router.ROUTES.stage(6));
 }
@@ -786,7 +1217,9 @@ function mount(container) {
   resetBoard();
 
   const url = new URL(window.location.href);
-  const key = (url.searchParams.get("key") || "").trim().toUpperCase();
+  const key = (url.searchParams.get("key") || "")
+    .trim()
+    .toUpperCase();
 
   if (key === TARGET) {
     checkUnlockFromUrl();
@@ -802,9 +1235,13 @@ function onLanguageChange() {
   if (!root) return;
 
   const oldBoard = board.map(tile => ({ ...tile }));
+
   render();
   board = oldBoard;
 }
 
-export default { mount, unmount, onLanguageChange };
-
+export default {
+  mount,
+  unmount,
+  onLanguageChange,
+};
