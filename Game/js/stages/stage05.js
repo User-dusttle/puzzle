@@ -1,4 +1,3 @@
-
 const DEBUG = new URLSearchParams(window.location.search)
   .get("debug") === "1";
 
@@ -22,9 +21,12 @@ let ruleChanged = false;
 let rulePaused = false;
 let overflowFound = false;
 let overflowLocked = false;
-let decoderOpen = false;
 let decoded = "";
 let mounted = false;
+
+let hintTimer = null;
+let hintGeneration = 0;
+let hintLoopActive = false;
 
 const translations = {
   "zh-CN": {
@@ -53,9 +55,9 @@ const translations = {
       "你找到了一个隐藏值。记下来，别让我再说第二遍。",
     secretFound: "隐藏密钥已显示。",
     solvedHint:
-      "这是什么？试着在某个 URL 后面加上 ?key=解密后的字符串，也许会有意外发现。",
+      "下一步：复制第五关网址，在末尾添加 ?key=，再把解密结果接在等号后面。例如：原网址?key=SATWA06_AHJZ。请使用你实际解出的结果。",
     urlHelp:
-      "解密成功并不代表通关。试着把结果作为 key 参数附加到第五关的 URL。",
+      "解密成功并不代表通关。复制第五关的网址，在末尾添加 ?key=，把解密结果粘贴到等号后面，然后按回车访问新网址。",
     close: "关闭",
     overflowTile: "异常数值",
     instructions:
@@ -69,6 +71,7 @@ const translations = {
     ruleAfter:
       "好了，搞定。现在方块碰到一起就会相乘，不用再管它们的数字是否相同了。怎么样？是不是有趣多了？",
   },
+
   en: {
     title: "Undefined Behavior",
     subtitle: "SYSTEM STATUS · UNDOCUMENTED ANOMALY DETECTED",
@@ -95,9 +98,9 @@ const translations = {
       "You found a hidden value. Write it down. Don't make me say it twice.",
     secretFound: "Hidden key revealed.",
     solvedHint:
-      "What's this? Try appending ?key=the-decrypted-string to a URL. Something might happen.",
+      "Next: copy the Stage 5 URL, append ?key=, and put the decrypted result after the equals sign. Example: original-URL?key=SATWA06_AHJZ. Use your actual result.",
     urlHelp:
-      "Successful decryption doesn't mean you've finished. Try adding the result as a key parameter to the Stage 5 URL.",
+      "Decryption is not the end. Copy the Stage 5 URL, append ?key=, paste the decrypted result after the equals sign, and press Enter.",
     close: "Close",
     overflowTile: "Overflow",
     instructions:
@@ -121,7 +124,15 @@ function t(key) {
   return translations[lang()][key];
 }
 
+/* 统一旁白情绪名称，避免传入 narrator.js 不支持的 mood。 */
 function speak(zh, en, mood = "neutral") {
+  const moodMap = {
+    normal: "neutral",
+    shocked: "concerned",
+    curious: "suspicious",
+    smug: "pleased",
+  };
+
   const validMoods = new Set([
     "neutral",
     "pleased",
@@ -132,13 +143,6 @@ function speak(zh, en, mood = "neutral") {
     "concerned",
   ]);
 
-  const moodMap = {
-    normal: "neutral",
-    shocked: "concerned",
-    curious: "suspicious",
-    smug: "pleased",
-  };
-
   const normalizedMood = moodMap[mood] || mood;
   const safeMood = validMoods.has(normalizedMood)
     ? normalizedMood
@@ -148,6 +152,87 @@ function speak(zh, en, mood = "neutral") {
     { "zh-CN": zh, en },
     safeMood
   );
+}
+
+/*
+ * 解密成功后的循环提示。
+ * 每次等待 18～43 秒，避免固定间隔。
+ * generation 用来阻止已经失效的旧计时器继续播放。
+ */
+function stopDecryptHints() {
+  hintGeneration++;
+  hintLoopActive = false;
+
+  if (hintTimer !== null) {
+    clearTimeout(hintTimer);
+    hintTimer = null;
+  }
+}
+
+function startDecryptHints() {
+  stopDecryptHints();
+
+  hintLoopActive = true;
+  const generation = hintGeneration;
+
+  const hints = [
+    {
+      zh: "解出来了？不错。不过，你真的知道接下来该把这串东西放在哪里吗？",
+      en: "Decoded it? Nice. But do you actually know where that string goes?",
+      mood: "pleased",
+    },
+    {
+      zh: "提醒一下：URL 不只是用来打开网页的。它后面还可以跟参数。",
+      en: "A reminder: URLs do more than open pages. They can also carry parameters.",
+      mood: "suspicious",
+    },
+    {
+      zh: "具体一点：在第五关的网址后面加上 ?key=，再把解密结果接在等号后面。",
+      en: "More specifically: append ?key= to the Stage 5 URL, then put the decrypted result after the equals sign.",
+      mood: "concerned",
+    },
+    {
+      zh: "格式是：第五关网址?key=你的解密结果。注意，别把“你的解密结果”这几个字原样填进去。",
+      en: "The format is: Stage 5 URL?key=YOUR_DECRYPTED_RESULT. Don't literally type the placeholder words.",
+      mood: "annoyed",
+    },
+    {
+      zh: "举个例子：如果结果是 ABC123，那么网址末尾就写 ?key=ABC123。你要用自己的实际结果替换示例。",
+      en: "For example, if the result were ABC123, the URL would end with ?key=ABC123. Replace the example with your actual result.",
+      mood: "impressed",
+    },
+    {
+      zh: "再说一遍，免得你假装没听见：复制第五关的网址，在末尾输入 ?key=，紧接着粘贴解密结果，然后按回车。",
+      en: "One more time, in case you weren't listening: copy the Stage 5 URL, append ?key=, paste the decrypted result, and press Enter.",
+      mood: "annoyed",
+    },
+  ];
+
+  let index = 0;
+
+  function scheduleNext() {
+    if (!hintLoopActive || generation !== hintGeneration) {
+      return;
+    }
+
+    const delay = 18000 + Math.floor(Math.random() * 25001);
+
+    hintTimer = setTimeout(() => {
+      hintTimer = null;
+
+      if (!hintLoopActive || generation !== hintGeneration) {
+        return;
+      }
+
+      const hint = hints[index % hints.length];
+      index++;
+
+      speak(hint.zh, hint.en, hint.mood);
+      scheduleNext();
+    }, delay);
+  }
+
+  scheduleNext();
 }
 
 function newTile(value, row, col, special = false) {
@@ -170,8 +255,8 @@ function resetBoard() {
   rulePaused = false;
   overflowFound = false;
   overflowLocked = false;
-  decoderOpen = false;
-  decoded = "";
+
+  stopDecryptHints();
 
   spawnTile();
   spawnTile();
@@ -206,6 +291,7 @@ function emptyCells() {
 
 function spawnTile() {
   const cells = emptyCells();
+
   if (!cells.length || overflowLocked) return null;
 
   const cell = cells[Math.floor(Math.random() * cells.length)];
@@ -249,6 +335,7 @@ function positionTile(element, tile) {
 
 function makeTileElement(tile) {
   const element = document.createElement("button");
+
   element.type = "button";
   element.className = "s05-tile";
   element.dataset.id = String(tile.id);
@@ -268,6 +355,7 @@ function makeTileElement(tile) {
   element.style.cursor = "pointer";
 
   const face = document.createElement("span");
+
   face.className = "s05-tile-face";
   face.style.display = "flex";
   face.style.width = "100%";
@@ -279,6 +367,7 @@ function makeTileElement(tile) {
   face.style.fontSize = "clamp(15px, 4vw, 28px)";
   face.style.boxSizing = "border-box";
   face.style.transition = "transform 110ms ease-out";
+
   element.appendChild(face);
 
   element.addEventListener("click", () => {
@@ -290,6 +379,9 @@ function makeTileElement(tile) {
     renderTile(current);
 
     const faceElement = element.querySelector(".s05-tile-face");
+
+    if (!faceElement) return;
+
     faceElement.textContent = SECRET_KEY;
     faceElement.style.fontSize = "clamp(9px, 2.3vw, 15px)";
     faceElement.style.color = "#8bffb0";
@@ -336,6 +428,8 @@ function renderTile(tile) {
 
   const face = element.querySelector(".s05-tile-face");
 
+  if (!face) return;
+
   if (tile.special && tile.revealed) {
     face.textContent = SECRET_KEY;
     face.style.fontSize = "clamp(9px, 2.3vw, 15px)";
@@ -358,6 +452,7 @@ function renderTile(tile) {
   if (tile.special) {
     element.dataset.overflow = "true";
     element.dataset.revealed = String(tile.revealed);
+
     element.setAttribute(
       "aria-label",
       tile.revealed ? "Hidden key" : t("overflowTile")
@@ -395,13 +490,11 @@ function render() {
         .stage05 {
           --s05-bg: #101721;
           --s05-panel: #171f2b;
-          --s05-panel-raised: #1d2938;
           --s05-border: #2c3b4e;
           --s05-text: #edf3fb;
           --s05-muted: #8fa1b8;
           --s05-blue: #77b7ff;
           --s05-green: #79e6b0;
-
           width: 100%;
           max-width: 1120px;
           margin: 0 auto;
@@ -411,9 +504,7 @@ function render() {
           font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
         }
 
-        .stage05 *,
-        .stage05 *::before,
-        .stage05 *::after {
+        .stage05 *, .stage05 *::before, .stage05 *::after {
           box-sizing: border-box;
         }
 
@@ -446,8 +537,7 @@ function render() {
           font-family: var(--font-mono, Consolas, monospace);
           font-size: 11px;
           font-weight: 700;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
+          letter-spacing: .16em;
         }
 
         .stage05 h1 {
@@ -456,7 +546,7 @@ function render() {
           font-size: clamp(26px, 4vw, 38px);
           font-weight: 680;
           line-height: 1.2;
-          letter-spacing: -0.04em;
+          letter-spacing: -.04em;
           overflow-wrap: anywhere;
         }
 
@@ -480,13 +570,11 @@ function render() {
           color: #b5cbe5;
           font-family: var(--font-mono, Consolas, monospace);
           font-size: 11px;
-          letter-spacing: 0.04em;
         }
 
         .stage05 .s05-status-dot {
           width: 7px;
           height: 7px;
-          flex: 0 0 auto;
           border-radius: 50%;
           background: var(--s05-green);
           box-shadow: 0 0 10px rgb(121 230 176 / 50%);
@@ -494,7 +582,7 @@ function render() {
 
         .stage05 .s05-layout {
           display: grid;
-          grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+          grid-template-columns: minmax(0, 1.05fr) minmax(280px, .95fr);
           align-items: stretch;
           gap: 22px;
           min-width: 0;
@@ -537,7 +625,7 @@ function render() {
           color: var(--s05-blue);
           font-family: var(--font-mono, Consolas, monospace);
           font-size: 10px;
-          letter-spacing: 0.12em;
+          letter-spacing: .12em;
         }
 
         .stage05 .s05-toolbar {
@@ -557,9 +645,7 @@ function render() {
           gap: 9px;
         }
 
-        .stage05 button {
-          font: inherit;
-        }
+        .stage05 button { font: inherit; }
 
         .stage05 .s05-button {
           display: inline-flex;
@@ -576,11 +662,7 @@ function render() {
           font-weight: 600;
           line-height: 1.3;
           cursor: pointer;
-          transition:
-            background-color 150ms ease,
-            border-color 150ms ease,
-            transform 150ms ease,
-            box-shadow 150ms ease;
+          transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
         }
 
         .stage05 .s05-button:hover {
@@ -588,9 +670,7 @@ function render() {
           background: #2a3a4e;
         }
 
-        .stage05 .s05-button:active {
-          transform: translateY(1px);
-        }
+        .stage05 .s05-button:active { transform: translateY(1px); }
 
         .stage05 .s05-button:focus-visible,
         .stage05 input:focus-visible {
@@ -627,13 +707,10 @@ function render() {
           color: var(--s05-text);
           font-family: var(--font-mono, Consolas, monospace);
           font-size: 15px;
-          font-weight: 700;
           font-variant-numeric: tabular-nums;
         }
 
-        .stage05 .s05-game-content[hidden] {
-          display: none !important;
-        }
+        .stage05 .s05-game-content[hidden] { display: none !important; }
 
         .stage05 #s05-game-content > p {
           margin: 0 0 14px;
@@ -670,11 +747,7 @@ function render() {
           pointer-events: none;
         }
 
-        .stage05 .s05-cell {
-          min-width: 0;
-          min-height: 0;
-          padding: 5px;
-        }
+        .stage05 .s05-cell { min-width: 0; min-height: 0; padding: 5px; }
 
         .stage05 .s05-cell::before {
           display: block;
@@ -686,14 +759,9 @@ function render() {
           content: "";
         }
 
-        .stage05 .s05-tile-layer {
-          position: absolute;
-          inset: 0;
-        }
+        .stage05 .s05-tile-layer { position: absolute; inset: 0; }
 
-        .stage05 .s05-tile {
-          outline-offset: -3px;
-        }
+        .stage05 .s05-tile { outline-offset: -3px; }
 
         .stage05 .s05-tile:focus-visible {
           z-index: 20;
@@ -722,9 +790,7 @@ function render() {
           gap: 10px;
         }
 
-        .stage05 .s05-decoder .s05-section-head {
-          margin-bottom: 12px;
-        }
+        .stage05 .s05-decoder .s05-section-head { margin-bottom: 12px; }
 
         .stage05 .s05-decoder label {
           margin-top: 5px;
@@ -747,14 +813,9 @@ function render() {
           font-size: 13px;
           line-height: 1.5;
           box-shadow: inset 0 1px 2px rgb(0 0 0 / 10%);
-          transition:
-            border-color 150ms ease,
-            box-shadow 150ms ease;
         }
 
-        .stage05 .s05-input::placeholder {
-          color: #63748a;
-        }
+        .stage05 .s05-input::placeholder { color: #63748a; }
 
         .stage05 .s05-input:focus {
           border-color: #77b7ff;
@@ -762,11 +823,7 @@ function render() {
           box-shadow: 0 0 0 3px rgb(119 183 255 / 12%);
         }
 
-        .stage05 #s05-decode {
-          align-self: flex-start;
-          min-width: 125px;
-          margin-top: 9px;
-        }
+        .stage05 #s05-decode { align-self: flex-start; min-width: 125px; margin-top: 9px; }
 
         .stage05 #s05-decode-message {
           margin: 3px 0 0;
@@ -781,7 +838,7 @@ function render() {
           color: var(--s05-muted);
           font-family: var(--font-mono, Consolas, monospace);
           font-size: 10px;
-          letter-spacing: 0.1em;
+          letter-spacing: .1em;
         }
 
         .stage05 .s05-output {
@@ -798,9 +855,7 @@ function render() {
           overflow-wrap: anywhere;
         }
 
-        .stage05 .s05-output:empty {
-          display: none;
-        }
+        .stage05 .s05-output:empty { display: none; }
 
         .stage05 #s05-url-hint {
           margin: 4px 0 0;
@@ -814,9 +869,7 @@ function render() {
           overflow-wrap: anywhere;
         }
 
-        .stage05 .s05-hidden {
-          display: none !important;
-        }
+        .stage05 .s05-hidden { display: none !important; }
 
         .stage05 .s05-footer {
           display: flex;
@@ -830,7 +883,7 @@ function render() {
           color: #75879d;
           font-family: var(--font-mono, Consolas, monospace);
           font-size: 10px;
-          letter-spacing: 0.04em;
+          letter-spacing: .04em;
         }
 
         .stage05 .s05-footer-state {
@@ -857,45 +910,30 @@ function render() {
           overflow: hidden;
           border: 1px solid #39ff88;
           background:
-            repeating-linear-gradient(
-              0deg,
-              rgb(0 255 100 / 12%) 0,
-              rgb(0 255 100 / 12%) 1px,
-              transparent 1px,
-              transparent 4px
-            ),
+            repeating-linear-gradient(0deg, rgb(0 255 100 / 12%) 0, rgb(0 255 100 / 12%) 1px, transparent 1px, transparent 4px),
             #050907 !important;
           color: #8bffb0 !important;
-          box-shadow:
-            0 0 8px rgb(57 255 136 / 65%),
-            inset 0 0 12px rgb(57 255 136 / 16%);
+          box-shadow: 0 0 8px rgb(57 255 136 / 65%), inset 0 0 12px rgb(57 255 136 / 16%);
         }
 
         .stage05 .s05-tile[data-overflow="true"] .s05-tile-face::after {
           position: absolute;
           inset: -100% 0;
-          background: linear-gradient(
-            transparent 40%,
-            rgb(57 255 136 / 45%) 50%,
-            transparent 60%
-          );
+          background: linear-gradient(transparent 40%, rgb(57 255 136 / 45%) 50%, transparent 60%);
           content: "";
           pointer-events: none;
           animation: s05-scan 1.2s linear infinite;
         }
 
-        .stage05 .s05-tile[data-overflow="true"][data-revealed="true"]
-          .s05-tile-face {
+        .stage05 .s05-tile[data-overflow="true"][data-revealed="true"] .s05-tile-face {
           border-color: #b4ffd0;
-          box-shadow:
-            0 0 12px rgb(57 255 136 / 75%),
-            inset 0 0 18px rgb(57 255 136 / 25%);
+          box-shadow: 0 0 12px rgb(57 255 136 / 75%), inset 0 0 18px rgb(57 255 136 / 25%);
         }
 
         @keyframes s05-glitch {
           0% { filter: brightness(1); }
           25% { filter: hue-rotate(25deg) brightness(1.25); }
-          50% { filter: brightness(0.8); }
+          50% { filter: brightness(.8); }
           75% { filter: hue-rotate(-20deg) brightness(1.15); }
           100% { filter: brightness(1); }
         }
@@ -906,78 +944,32 @@ function render() {
         }
 
         @media (max-width: 760px) {
-          .stage05 {
-            padding: 12px;
-          }
-
-          .stage05 .s05-panel {
-            padding: 20px;
-          }
-
+          .stage05 { padding: 12px; }
+          .stage05 .s05-panel { padding: 20px; }
           .stage05 .s05-heading {
             flex-direction: column;
             gap: 14px;
             margin-bottom: 20px;
             padding-bottom: 20px;
           }
-
-          .stage05 .s05-layout {
-            grid-template-columns: minmax(0, 1fr);
-            gap: 16px;
-          }
-
-          .stage05 .s05-section {
-            padding: 16px;
-          }
-
-          .stage05 .s05-board-wrap {
-            max-width: 460px;
-          }
+          .stage05 .s05-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+          .stage05 .s05-section { padding: 16px; }
+          .stage05 .s05-board-wrap { max-width: 460px; }
         }
 
         @media (max-width: 420px) {
-          .stage05 {
-            padding: 6px;
-          }
-
-          .stage05 .s05-panel {
-            padding: 12px;
-            border-radius: 12px;
-          }
-
-          .stage05 .s05-section {
-            padding: 12px;
-          }
-
-          .stage05 .s05-toolbar {
-            align-items: stretch;
-          }
-
+          .stage05 { padding: 6px; }
+          .stage05 .s05-panel { padding: 12px; border-radius: 12px; }
+          .stage05 .s05-section { padding: 12px; }
+          .stage05 .s05-toolbar { align-items: stretch; }
           .stage05 .s05-toolbar-left,
-          .stage05 .s05-toolbar-right {
-            width: 100%;
-          }
-
+          .stage05 .s05-toolbar-right { width: 100%; }
           .stage05 .s05-toolbar-left > *,
-          .stage05 .s05-toolbar-right > * {
-            flex: 1;
-          }
-
-          .stage05 .s05-score {
-            justify-content: space-between;
-          }
-
-          .stage05 .s05-cell {
-            padding: 3px;
-          }
-
-          .stage05 .s05-tile {
-            padding: 3px !important;
-          }
-
-          .stage05 .s05-input {
-            font-size: 16px;
-          }
+          .stage05 .s05-toolbar-right > * { flex: 1; }
+          .stage05 .s05-score { justify-content: space-between; }
+          .stage05 .s05-cell { padding: 3px; }
+          .stage05 .s05-tile { padding: 3px !important; }
+          .stage05 .s05-input { font-size: 16px; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -985,11 +977,8 @@ function render() {
           .stage05 .s05-tile[data-overflow="true"] .s05-tile-face::after {
             animation: none !important;
           }
-
           .stage05 .s05-button,
-          .stage05 .s05-input {
-            transition: none;
-          }
+          .stage05 .s05-input { transition: none; }
         }
       </style>
 
@@ -1018,54 +1007,27 @@ function render() {
 
             <div class="s05-toolbar">
               <div class="s05-toolbar-left">
-                <button
-                  id="s05-toggle-game"
-                  class="s05-button s05-button-primary"
-                  type="button"
-                  aria-expanded="false"
-                  aria-controls="s05-game-content"
-                >${t("gameTitle")} ＋</button>
+                <button id="s05-toggle-game" class="s05-button s05-button-primary" type="button" aria-expanded="false" aria-controls="s05-game-content">${t("gameTitle")} ＋</button>
               </div>
-
               <div class="s05-toolbar-right">
                 <div class="s05-score">
                   <span>${t("score")}</span>
                   <strong id="s05-score">0</strong>
                 </div>
-
-                <button
-                  id="s05-restart"
-                  class="s05-button"
-                  type="button"
-                >↻ ${t("restart")}</button>
+                <button id="s05-restart" class="s05-button" type="button">↻ ${t("restart")}</button>
               </div>
             </div>
 
             <div id="s05-game-content" class="s05-game-content" hidden>
               <p>${t("instructions")}</p>
-
               <div class="s05-board-wrap">
-                <div
-                  id="s05-board"
-                  class="s05-board"
-                  role="application"
-                  aria-label="2048"
-                  tabindex="0"
-                >
+                <div id="s05-board" class="s05-board" role="application" aria-label="2048" tabindex="0">
                   <div class="s05-grid" aria-hidden="true">
-                    ${Array.from(
-                      { length: 16 },
-                      () => '<div class="s05-cell"></div>'
-                    ).join("")}
+                    ${Array.from({ length: 16 }, () => '<div class="s05-cell"></div>').join("")}
                   </div>
-
-                  <div
-                    id="s05-tile-layer"
-                    class="s05-tile-layer"
-                  ></div>
+                  <div id="s05-tile-layer" class="s05-tile-layer"></div>
                 </div>
               </div>
-
               <p id="s05-game-message" aria-live="polite"></p>
             </div>
           </section>
@@ -1080,31 +1042,14 @@ function render() {
             </div>
 
             <label for="s05-cipher">${t("cipherLabel")}</label>
-            <input
-              id="s05-cipher"
-              class="s05-input"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="${t("decodePlaceholder")}"
-            />
+            <input id="s05-cipher" class="s05-input" autocomplete="off" spellcheck="false" placeholder="${t("decodePlaceholder")}" />
 
             <label for="s05-key">${t("keyLabel")}</label>
-            <input
-              id="s05-key"
-              class="s05-input"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="${t("keyPlaceholder")}"
-            />
+            <input id="s05-key" class="s05-input" autocomplete="off" spellcheck="false" placeholder="${t("keyPlaceholder")}" />
 
-            <button
-              id="s05-decode"
-              class="s05-button s05-button-primary"
-              type="button"
-            >${t("decode")} <span aria-hidden="true">→</span></button>
+            <button id="s05-decode" class="s05-button s05-button-primary" type="button">${t("decode")} <span aria-hidden="true">→</span></button>
 
             <p id="s05-decode-message" aria-live="polite"></p>
-
             <p class="s05-output-label">${t("outputLabel")}</p>
             <p id="s05-decode-output" class="s05-output"></p>
             <p id="s05-url-hint" class="s05-hidden"></p>
@@ -1218,6 +1163,7 @@ function decrypt() {
     .replace(/[^A-Z]/g, "");
 
   if (!cipher || !key) {
+    stopDecryptHints();
     message.textContent = t("wrong");
     output.textContent = "";
     urlHint.classList.add("s05-hidden");
@@ -1249,11 +1195,14 @@ function decrypt() {
     urlHint.classList.remove("s05-hidden");
 
     speak(
-      "这是什么？试着在某个 URL 后面加上 ?key=解密后的字符串，也许会有意外发现。",
-      "What's this? Try appending ?key=the-decrypted-string to a URL. Something might happen.",
+      "解密成功了。不过，还差最后一步：在第五关的网址末尾添加 ?key=，然后把解密结果接在等号后面。格式是 原网址?key=你的解密结果。注意，示例文字要换成你真正解出的字符串。",
+      "Decryption succeeded. One last step: append ?key= to the Stage 5 URL, then put your decrypted result after the equals sign. The format is original-URL?key=YOUR_DECRYPTED_RESULT. Replace the placeholder with your actual result.",
       "suspicious"
     );
+
+    startDecryptHints();
   } else {
+    stopDecryptHints();
     message.textContent = t("wrong");
     urlHint.classList.add("s05-hidden");
   }
@@ -1333,9 +1282,7 @@ function move(direction) {
       if (
         next &&
         !next.special &&
-        (!ruleChanged
-          ? current.value === next.value
-          : true)
+        (!ruleChanged ? current.value === next.value : true)
       ) {
         const product = ruleChanged
           ? current.value * next.value
@@ -1401,8 +1348,9 @@ function move(direction) {
   if (!changed) {
     if (board.length >= SIZE * SIZE && !canMove()) {
       gameOver = true;
-      root.querySelector("#s05-game-message").textContent =
-        t("gameOver");
+
+      const message = root.querySelector("#s05-game-message");
+      if (message) message.textContent = t("gameOver");
     }
 
     return;
@@ -1434,9 +1382,7 @@ function move(direction) {
     renderTile(tile);
   }
 
-  if (!overflowLocked) {
-    spawnTile();
-  }
+  if (!overflowLocked) spawnTile();
 
   updateScore();
 
@@ -1456,14 +1402,11 @@ function move(direction) {
     );
   }
 
-  if (
-    !overflowLocked &&
-    board.length >= SIZE * SIZE &&
-    !canMove()
-  ) {
+  if (!overflowLocked && board.length >= SIZE * SIZE && !canMove()) {
     gameOver = true;
-    root.querySelector("#s05-game-message").textContent =
-      t("gameOver");
+
+    const message = root.querySelector("#s05-game-message");
+    if (message) message.textContent = t("gameOver");
   }
 }
 
@@ -1521,6 +1464,7 @@ function checkUnlockFromUrl() {
     return;
   }
 
+  stopDecryptHints();
   root.dataset.stage05Navigating = "1";
 
   Progress.completeStage(5);
@@ -1528,6 +1472,8 @@ function checkUnlockFromUrl() {
 }
 
 function mount(container) {
+  stopDecryptHints();
+
   root = container;
   mounted = true;
 
@@ -1538,6 +1484,8 @@ function mount(container) {
 }
 
 function unmount() {
+  stopDecryptHints();
+
   mounted = false;
   root = null;
 }
@@ -1546,9 +1494,26 @@ function onLanguageChange() {
   if (!root) return;
 
   const oldBoard = board.map(tile => ({ ...tile }));
+  const wasDecoded = decoded === TARGET;
 
   render();
+
   board = oldBoard;
+
+  for (const tile of board) {
+    renderTile(tile);
+  }
+
+  updateScore();
+
+  if (wasDecoded) {
+    const urlHint = root.querySelector("#s05-url-hint");
+
+    if (urlHint) {
+      urlHint.textContent = t("solvedHint");
+      urlHint.classList.remove("s05-hidden");
+    }
+  }
 }
 
 export default {
