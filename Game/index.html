@@ -12,6 +12,8 @@
 
   <meta name="theme-color" content="#f7f7f5">
 
+  <base href="/puzzle/Game/">
+
   <title>Help Center</title>
 
   <link rel="stylesheet" href="./css/global.css">
@@ -24,8 +26,20 @@
       const params = new URLSearchParams(location.search);
       const requestedPath = params.get("p");
 
-      if (requestedPath && requestedPath.startsWith("/")) {
-        history.replaceState(null, "", requestedPath);
+      if (
+        requestedPath &&
+        requestedPath.startsWith("/puzzle/Game/") &&
+        !requestedPath.startsWith("//")
+      ) {
+        const target = new URL(requestedPath, location.origin);
+
+        if (target.origin === location.origin) {
+          history.replaceState(
+            null,
+            "",
+            target.pathname + target.search + target.hash
+          );
+        }
       }
     })();
   </script>
