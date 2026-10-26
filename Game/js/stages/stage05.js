@@ -28,76 +28,88 @@ let mounted = false;
 
 const translations = {
   "zh-CN": {
-    title: "实验室",
+    title: "未定义行为",
+    subtitle: "系统运行状态 · 存在未记录的异常",
     gameTitle: "2048",
-    score: "分数",
+    score: "当前数值",
     restart: "重新开始",
-    decoderTitle: "解码器",
+    decoderTitle: "解密终端",
+    decoderDesc: "输入密文与密钥，尝试还原数据。",
     cipherLabel: "密文",
-    keyLabel: "秘钥",
-    decode: "解密",
+    keyLabel: "密钥",
+    decode: "执行解密",
     decodePlaceholder: "输入密文",
-    keyPlaceholder: "输入秘钥",
-    wrong: "解密失败。检查一下输入。",
+    keyPlaceholder: "输入密钥",
+    wrong: "解密失败。请检查输入内容。",
     correct: "STAGE06_OPEN",
     continue: "继续",
     gameOver: "没有可用的移动了。",
-    ruleTitle: "规则更新",
+    ruleTitle: "规则已修改",
     ruleText:
-      "规则改了：相同数值不再是合并条件，现在两个方块相撞就会相乘。别问为什么，我也不想知道。",
-    ruleTextEn:
-      "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
+      "好了，搞定。现在方块碰到一起就会相乘，不用再管它们的数字是否相同了。怎么样？是不是有趣多了？",
     overflowHint:
       "等等……这个数值已经超过了变量能表示的范围？这不应该啊。",
     secretHint:
       "你找到了一个隐藏值。记下来，别让我再说第二遍。",
-    secretFound: "已获得隐藏秘钥。",
+    secretFound: "隐藏密钥已显示。",
     solvedHint:
-      "这是什么？你或许可以在某串东西后面输入 ?key=解密后的串 试试看？",
-    solvedHintEn:
-      "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
+      "这是什么？试着在某个 URL 后面加上 ?key=解密后的字符串，也许会有意外发现。",
     urlHelp:
       "解密成功并不代表通关。试着把结果作为 key 参数附加到第五关的 URL。",
     close: "关闭",
-    overflowTile: "黑色方块",
+    overflowTile: "异常数值",
     instructions:
       "使用方向键或 WASD 移动方块。触屏设备可以滑动棋盘。",
+    gameStatus: "运行中",
+    terminalStatus: "等待输入",
+    outputLabel: "输出结果",
+    systemLabel: "SYSTEM / 05",
+    gameIntro: "数值合并测试",
+    ruleBefore: "这游戏也太无聊了……让我看看代码里究竟写了些什么。",
+    ruleAfter:
+      "好了，搞定。现在方块碰到一起就会相乘，不用再管它们的数字是否相同了。怎么样？是不是有趣多了？",
   },
   en: {
-    title: "Laboratory",
+    title: "Undefined Behavior",
+    subtitle: "SYSTEM STATUS · UNDOCUMENTED ANOMALY DETECTED",
     gameTitle: "2048",
-    score: "Score",
+    score: "Current value",
     restart: "Restart",
-    decoderTitle: "Decoder",
+    decoderTitle: "Decryption Terminal",
+    decoderDesc: "Enter the ciphertext and key to recover the data.",
     cipherLabel: "Ciphertext",
     keyLabel: "Key",
     decode: "Decrypt",
     decodePlaceholder: "Enter ciphertext",
     keyPlaceholder: "Enter key",
-    wrong: "Decryption failed. Check your inputs.",
+    wrong: "Decryption failed. Check your input.",
     correct: "STAGE06_OPEN",
     continue: "Continue",
     gameOver: "No moves remain.",
-    ruleTitle: "Rule update",
+    ruleTitle: "Rules modified",
     ruleText:
-      "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
-    ruleTextEn:
-      "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
+      "There. Done. Now colliding tiles multiply, whether or not their values match. What do you think? More interesting now?",
     overflowHint:
       "Wait... that value is beyond the range this variable can represent? That shouldn't happen.",
     secretHint:
       "You found a hidden value. Write it down. Don't make me say it twice.",
-    secretFound: "Hidden key acquired.",
+    secretFound: "Hidden key revealed.",
     solvedHint:
-      "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
-    solvedHintEn:
-      "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
+      "What's this? Try appending ?key=the-decrypted-string to a URL. Something might happen.",
     urlHelp:
       "Successful decryption doesn't mean you've finished. Try adding the result as a key parameter to the Stage 5 URL.",
     close: "Close",
-    overflowTile: "Black tile",
+    overflowTile: "Overflow",
     instructions:
       "Use the arrow keys or WASD to move. On touch devices, swipe the board.",
+    gameStatus: "ONLINE",
+    terminalStatus: "AWAITING INPUT",
+    outputLabel: "OUTPUT",
+    systemLabel: "SYSTEM / 05",
+    gameIntro: "Numeric merge test",
+    ruleBefore: "This game is so boring... Let's see what the code actually does.",
+    ruleAfter:
+      "There. Done. Now colliding tiles multiply, whether or not their values match. What do you think? More interesting now?",
   },
 };
 
@@ -180,29 +192,29 @@ function spawnTile() {
 }
 
 function colorFor(value, special) {
-  if (special) return "#050907";
+  if (special) return "#07130e";
 
   const colors = {
-    2: "#eee4da",
-    4: "#ede0c8",
-    8: "#f2b179",
-    16: "#f59563",
-    32: "#f67c5f",
-    64: "#f65e3b",
-    128: "#edcf72",
-    256: "#edcc61",
-    512: "#edc850",
-    1024: "#edc53f",
-    2048: "#edc22e",
+    2: "#e7e9ee",
+    4: "#cdd8e8",
+    8: "#9ab8dc",
+    16: "#79a2d0",
+    32: "#5988be",
+    64: "#3f70a7",
+    128: "#d9bd79",
+    256: "#d8a94d",
+    512: "#d89436",
+    1024: "#d77b29",
+    2048: "#c85e28",
   };
 
-  if (value > 2048) return "#3c3a32";
-  return colors[value] || "#3c3a32";
+  if (value > 2048) return "#263449";
+  return colors[value] || "#263449";
 }
 
 function textColor(value, special) {
   if (special || value >= 8) return "#ffffff";
-  return "#776e65";
+  return "#28384b";
 }
 
 function positionTile(element, tile) {
@@ -237,7 +249,7 @@ function makeTileElement(tile) {
   face.style.height = "100%";
   face.style.alignItems = "center";
   face.style.justifyContent = "center";
-  face.style.borderRadius = "4px";
+  face.style.borderRadius = "7px";
   face.style.fontWeight = "800";
   face.style.fontSize = "clamp(15px, 4vw, 28px)";
   face.style.boxSizing = "border-box";
@@ -356,54 +368,154 @@ function render() {
     <section class="stage stage05">
       <style>
         .stage05 {
+          --s05-bg: #101721;
+          --s05-panel: #171f2b;
+          --s05-panel-raised: #1d2938;
+          --s05-border: #2c3b4e;
+          --s05-text: #edf3fb;
+          --s05-muted: #8fa1b8;
+          --s05-blue: #77b7ff;
+          --s05-green: #79e6b0;
+
           width: 100%;
-          max-width: var(--content-width, 1080px);
-          margin-inline: auto;
-          color: var(--color-text, #242424);
-          font-family: var(--font-sans, sans-serif);
+          max-width: 1120px;
+          margin: 0 auto;
+          padding: clamp(12px, 2.5vw, 28px);
+          box-sizing: border-box;
+          color: var(--s05-text);
+          font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+        }
+
+        .stage05 *,
+        .stage05 *::before,
+        .stage05 *::after {
+          box-sizing: border-box;
         }
 
         .stage05 .s05-panel {
+          width: 100%;
           min-width: 0;
-          padding: clamp(16px, 3vw, 30px);
-          border: 1px solid var(--color-border, #deded8);
-          border-radius: var(--radius-lg, 12px);
-          background: var(--color-surface, #fff);
-          box-shadow: var(--shadow-panel, 0 2px 10px rgb(0 0 0 / 4%));
+          padding: clamp(20px, 3.5vw, 38px);
+          border: 1px solid var(--s05-border);
+          border-radius: 18px;
+          background:
+            radial-gradient(ellipse at 8% 0%, rgb(68 112 163 / 12%), transparent 42%),
+            var(--s05-bg);
+          box-shadow: 0 18px 48px rgb(0 0 0 / 18%);
+          overflow: hidden;
+        }
+
+        .stage05 .s05-heading {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 18px;
+          margin: 0 0 30px;
+          padding: 0 0 24px;
+          border-bottom: 1px solid var(--s05-border);
+        }
+
+        .stage05 .s05-eyebrow {
+          margin: 0 0 10px;
+          color: var(--s05-blue);
+          font-family: var(--font-mono, Consolas, monospace);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
         }
 
         .stage05 h1 {
-          margin: 0 0 26px;
-          padding-bottom: 18px;
-          border-bottom: 1px solid var(--color-border, #deded8);
-          font-size: clamp(1.6rem, 3vw, 2rem);
-          font-weight: 600;
-          letter-spacing: -0.025em;
+          margin: 0;
+          color: var(--s05-text);
+          font-size: clamp(26px, 4vw, 38px);
+          font-weight: 680;
+          line-height: 1.2;
+          letter-spacing: -0.04em;
+          overflow-wrap: anywhere;
+        }
+
+        .stage05 .s05-subtitle {
+          margin: 12px 0 0;
+          color: var(--s05-muted);
+          font-size: 13px;
+          line-height: 1.7;
+        }
+
+        .stage05 .s05-system-tag {
+          flex: 0 0 auto;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 5px;
+          padding: 9px 12px;
+          border: 1px solid #34475d;
+          border-radius: 7px;
+          background: rgb(119 183 255 / 5%);
+          color: #b5cbe5;
+          font-family: var(--font-mono, Consolas, monospace);
+          font-size: 11px;
+          letter-spacing: 0.04em;
+        }
+
+        .stage05 .s05-status-dot {
+          width: 7px;
+          height: 7px;
+          flex: 0 0 auto;
+          border-radius: 50%;
+          background: var(--s05-green);
+          box-shadow: 0 0 10px rgb(121 230 176 / 50%);
+        }
+
+        .stage05 .s05-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+          align-items: stretch;
+          gap: 22px;
+          min-width: 0;
+        }
+
+        .stage05 .s05-section {
+          min-width: 0;
+          padding: clamp(16px, 2.5vw, 24px);
+          border: 1px solid var(--s05-border);
+          border-radius: 12px;
+          background: var(--s05-panel);
+        }
+
+        .stage05 .s05-section-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 22px;
         }
 
         .stage05 h2 {
           margin: 0;
-          font-size: 1.2rem;
-          font-weight: 600;
-          letter-spacing: -0.015em;
+          color: var(--s05-text);
+          font-size: 17px;
+          font-weight: 650;
+          line-height: 1.4;
         }
 
-        .s05-layout {
-          display: grid;
-          grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-          align-items: start;
-          gap: clamp(20px, 3vw, 32px);
-          max-width: 100%;
-          margin: 0;
+        .stage05 .s05-section-desc {
+          margin: 7px 0 0;
+          color: var(--s05-muted);
+          font-size: 12px;
+          line-height: 1.7;
         }
 
-        .s05-panel,
-        .s05-layout > *,
-        .s05-decoder {
-          min-width: 0;
+        .stage05 .s05-section-code {
+          display: inline-block;
+          margin-bottom: 7px;
+          color: var(--s05-blue);
+          font-family: var(--font-mono, Consolas, monospace);
+          font-size: 10px;
+          letter-spacing: 0.12em;
         }
 
-        .s05-toolbar {
+        .stage05 .s05-toolbar {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -412,61 +524,119 @@ function render() {
           margin-bottom: 16px;
         }
 
-        .stage05 .s05-toolbar button {
-          min-height: 36px;
-          padding: 7px 12px;
-          border: 1px solid var(--color-border, #deded8);
-          border-radius: var(--radius-sm, 4px);
-          background: var(--color-surface, #fff);
-          color: var(--color-text, #242424);
-          font-size: var(--font-size-sm, 0.875rem);
-          font-weight: 500;
-          transition:
-            background-color var(--transition-fast, 140ms ease),
-            border-color var(--transition-fast, 140ms ease);
+        .stage05 .s05-toolbar-left,
+        .stage05 .s05-toolbar-right {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 9px;
         }
 
-        .stage05 .s05-toolbar button:hover {
-          border-color: var(--color-accent, #315e8a);
-          background: var(--color-surface-muted, #f0f0ed);
+        .stage05 button {
+          font: inherit;
+        }
+
+        .stage05 .s05-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-height: 38px;
+          padding: 9px 13px;
+          border: 1px solid #394b60;
+          border-radius: 7px;
+          background: #202c3b;
+          color: #e8f0fa;
+          font-size: 12px;
+          font-weight: 600;
+          line-height: 1.3;
+          cursor: pointer;
+          transition:
+            background-color 150ms ease,
+            border-color 150ms ease,
+            transform 150ms ease,
+            box-shadow 150ms ease;
+        }
+
+        .stage05 .s05-button:hover {
+          border-color: #688ab1;
+          background: #2a3a4e;
+        }
+
+        .stage05 .s05-button:active {
+          transform: translateY(1px);
+        }
+
+        .stage05 .s05-button:focus-visible,
+        .stage05 input:focus-visible {
+          outline: 2px solid var(--s05-blue);
+          outline-offset: 3px;
+        }
+
+        .stage05 .s05-button-primary {
+          border-color: #78b8ff;
+          background: #77b7ff;
+          color: #101c2a;
+        }
+
+        .stage05 .s05-button-primary:hover {
+          border-color: #a0ceff;
+          background: #a0ceff;
         }
 
         .stage05 .s05-score {
-          padding: 5px 10px;
-          border: 1px solid var(--color-border, #deded8);
-          border-radius: var(--radius-sm, 4px);
-          background: var(--color-surface-muted, #f0f0ed);
-          color: var(--color-text-secondary, #777771);
-          font-size: var(--font-size-sm, 0.875rem);
-          font-variant-numeric: tabular-nums;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 38px;
+          padding: 7px 11px;
+          border: 1px solid #304054;
+          border-radius: 7px;
+          background: #111a26;
+          color: var(--s05-muted);
+          font-size: 11px;
+          white-space: nowrap;
         }
 
         .stage05 .s05-score strong {
-          margin-left: 4px;
-          color: var(--color-text, #242424);
-          font-family: var(--font-mono, monospace);
+          color: var(--s05-text);
+          font-family: var(--font-mono, Consolas, monospace);
+          font-size: 15px;
+          font-weight: 700;
+          font-variant-numeric: tabular-nums;
         }
 
-        .s05-board-wrap {
+        .stage05 .s05-game-content[hidden] {
+          display: none !important;
+        }
+
+        .stage05 #s05-game-content > p {
+          margin: 0 0 14px;
+          color: var(--s05-muted);
+          font-size: 12px;
+          line-height: 1.7;
+        }
+
+        .stage05 .s05-board-wrap {
           width: 100%;
           max-width: 460px;
           margin: 0 auto;
         }
 
-        .s05-board {
+        .stage05 .s05-board {
           position: relative;
           width: 100%;
           aspect-ratio: 1;
           overflow: hidden;
-          border: 1px solid rgb(0 0 0 / 7%);
-          border-radius: 7px;
-          background: #bbada0;
-          box-shadow: none;
+          border: 1px solid #39485a;
+          border-radius: 10px;
+          background: #253142;
+          box-shadow: inset 0 0 0 5px rgb(8 14 23 / 12%);
           touch-action: none;
           user-select: none;
         }
 
-        .s05-grid {
+        .stage05 .s05-grid {
           position: absolute;
           inset: 0;
           display: grid;
@@ -475,174 +645,189 @@ function render() {
           pointer-events: none;
         }
 
-        .s05-cell {
+        .stage05 .s05-cell {
           min-width: 0;
           min-height: 0;
           padding: 5px;
         }
 
-        .s05-cell::before {
+        .stage05 .s05-cell::before {
           display: block;
           width: 100%;
           height: 100%;
-          border-radius: 4px;
-          background: rgb(238 228 218 / 36%);
+          border: 1px solid rgb(255 255 255 / 3%);
+          border-radius: 7px;
+          background: rgb(9 16 26 / 28%);
           content: "";
         }
 
-        .s05-tile-layer {
+        .stage05 .s05-tile-layer {
           position: absolute;
           inset: 0;
         }
 
-        .s05-tile {
+        .stage05 .s05-tile {
           outline-offset: -3px;
         }
 
-        .s05-tile:focus-visible {
+        .stage05 .s05-tile:focus-visible {
           z-index: 20;
-          outline: 2px solid var(--color-accent, #315e8a);
+          outline: 2px solid #77b7ff;
         }
 
-        .s05-tile-face {
+        .stage05 .s05-tile-face {
           overflow: hidden;
           overflow-wrap: anywhere;
-          border-radius: 4px;
-          box-shadow: none;
-        }
-
-        .stage05 #s05-game-content > p {
-          margin: 0 0 14px;
-          color: var(--color-text-secondary, #777771);
-          font-size: var(--font-size-sm, 0.875rem);
+          border: 1px solid rgb(255 255 255 / 10%);
+          border-radius: 7px;
+          box-shadow: 0 2px 5px rgb(0 0 0 / 10%);
         }
 
         .stage05 #s05-game-message {
-          margin: 12px 0 0;
-          color: var(--color-text-secondary, #777771);
-          font-size: var(--font-size-sm, 0.875rem);
+          min-height: 18px;
+          margin: 13px 0 0;
+          color: var(--s05-muted);
+          font-size: 12px;
+          line-height: 1.6;
         }
 
-        .s05-game-content[hidden] {
-          display: none !important;
-        }
-
-        .s05-decoder {
-          display: grid;
-          align-content: start;
+        .stage05 .s05-decoder {
+          display: flex;
+          flex-direction: column;
           gap: 10px;
-          padding: 0 0 0 24px;
-          border: 0;
-          border-left: 1px solid var(--color-border, #deded8);
-          border-radius: 0;
-          background: transparent;
         }
 
-        .s05-decoder h2 {
-          margin-bottom: 8px;
-          padding: 0 0 14px;
-          border-bottom: 1px solid var(--color-border, #deded8);
+        .stage05 .s05-decoder .s05-section-head {
+          margin-bottom: 12px;
         }
 
-        .s05-decoder label {
-          margin-top: 4px;
-          color: var(--color-text-secondary, #777771);
-          font-size: var(--font-size-sm, 0.875rem);
-          font-weight: 500;
+        .stage05 .s05-decoder label {
+          margin-top: 5px;
+          color: #b4c2d3;
+          font-size: 12px;
+          font-weight: 600;
         }
 
-        .s05-decoder input {
+        .stage05 .s05-input {
+          display: block;
           width: 100%;
           min-width: 0;
-          min-height: 40px;
-          padding: 9px 11px;
-          border: 1px solid var(--color-border, #deded8);
-          border-radius: var(--radius-sm, 4px);
-          background: var(--color-surface, #fff);
-          color: var(--color-text, #242424);
-          font-family: var(--font-mono, monospace);
-          font-size: var(--font-size-sm, 0.875rem);
+          min-height: 43px;
+          padding: 11px 12px;
+          border: 1px solid #35465a;
+          border-radius: 7px;
+          background: #101823;
+          color: #edf3fb;
+          font-family: var(--font-mono, Consolas, monospace);
+          font-size: 13px;
+          line-height: 1.5;
+          box-shadow: inset 0 1px 2px rgb(0 0 0 / 10%);
           transition:
-            border-color var(--transition-fast, 140ms ease),
-            box-shadow var(--transition-fast, 140ms ease);
+            border-color 150ms ease,
+            box-shadow 150ms ease;
         }
 
-        .s05-decoder input:focus {
+        .stage05 .s05-input::placeholder {
+          color: #63748a;
+        }
+
+        .stage05 .s05-input:focus {
+          border-color: #77b7ff;
           outline: none;
-          border-color: var(--color-accent, #315e8a);
-          box-shadow: 0 0 0 2px rgb(49 94 138 / 12%);
-        }
-
-        .s05-decoder input::placeholder {
-          color: #92928b;
-          font-family: var(--font-sans, sans-serif);
+          box-shadow: 0 0 0 3px rgb(119 183 255 / 12%);
         }
 
         .stage05 #s05-decode {
-          justify-self: start;
-          min-height: 38px;
-          margin-top: 5px;
-          padding: 8px 20px;
-          border: 1px solid var(--color-accent, #315e8a);
-          border-radius: var(--radius-sm, 4px);
-          background: var(--color-accent, #315e8a);
-          color: #fff;
-          font-size: var(--font-size-sm, 0.875rem);
-          font-weight: 500;
-          transition: background-color var(--transition-fast, 140ms ease);
-        }
-
-        .stage05 #s05-decode:hover {
-          background: var(--color-accent-hover, #24486c);
+          align-self: flex-start;
+          min-width: 125px;
+          margin-top: 9px;
         }
 
         .stage05 #s05-decode-message {
-          margin: 2px 0 0;
-          color: var(--color-danger, #b83b3b);
-          font-size: var(--font-size-sm, 0.875rem);
+          margin: 3px 0 0;
+          color: #ff9a9a;
+          font-size: 12px;
+          line-height: 1.7;
           overflow-wrap: anywhere;
         }
 
-        .s05-output {
-          min-height: 0;
+        .stage05 .s05-output-label {
+          margin-top: 7px;
+          color: var(--s05-muted);
+          font-family: var(--font-mono, Consolas, monospace);
+          font-size: 10px;
+          letter-spacing: 0.1em;
+        }
+
+        .stage05 .s05-output {
+          min-height: 42px;
           margin: 0;
-          padding: 10px 12px;
-          border: 1px solid var(--color-border, #deded8);
-          border-radius: var(--radius-sm, 4px);
-          background: var(--color-surface-muted, #f0f0ed);
-          color: var(--color-text, #242424);
-          font-family: var(--font-mono, monospace);
-          font-size: var(--font-size-sm, 0.875rem);
+          padding: 12px;
+          border: 1px solid #304054;
+          border-radius: 7px;
+          background: #101823;
+          color: var(--s05-green);
+          font-family: var(--font-mono, Consolas, monospace);
+          font-size: 13px;
+          line-height: 1.6;
           overflow-wrap: anywhere;
         }
 
-        .s05-output:empty {
+        .stage05 .s05-output:empty {
           display: none;
         }
 
         .stage05 #s05-url-hint {
           margin: 4px 0 0;
-          color: var(--color-text-secondary, #777771);
-          font-size: var(--font-size-sm, 0.875rem);
+          padding: 11px 12px;
+          border: 1px solid rgb(121 230 176 / 25%);
+          border-radius: 7px;
+          background: rgb(121 230 176 / 6%);
+          color: #b9f4d6;
+          font-size: 12px;
+          line-height: 1.8;
           overflow-wrap: anywhere;
         }
 
-        .s05-hidden {
+        .stage05 .s05-hidden {
           display: none !important;
         }
 
-        .s05-notice {
-          padding: 12px;
-          border: 1px solid var(--color-border, #deded8);
-          border-radius: var(--radius-sm, 4px);
+        .stage05 .s05-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 22px;
+          padding-top: 17px;
+          border-top: 1px solid var(--s05-border);
+          color: #75879d;
+          font-family: var(--font-mono, Consolas, monospace);
+          font-size: 10px;
+          letter-spacing: 0.04em;
         }
 
-        .s05-tile[data-overflow="true"] {
+        .stage05 .s05-footer-state {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+        }
+
+        .stage05 .s05-footer-state::before {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #e4b36c;
+          content: "";
+        }
+
+        .stage05 .s05-tile[data-overflow="true"] {
           z-index: 10;
           animation: s05-glitch 180ms steps(2, end) infinite;
         }
 
-        .s05-tile[data-overflow="true"] .s05-tile-face {
+        .stage05 .s05-tile[data-overflow="true"] .s05-tile-face {
           position: relative;
           overflow: hidden;
           border: 1px solid #39ff88;
@@ -661,7 +846,7 @@ function render() {
             inset 0 0 12px rgb(57 255 136 / 16%);
         }
 
-        .s05-tile[data-overflow="true"] .s05-tile-face::after {
+        .stage05 .s05-tile[data-overflow="true"] .s05-tile-face::after {
           position: absolute;
           inset: -100% 0;
           background: linear-gradient(
@@ -674,7 +859,7 @@ function render() {
           animation: s05-scan 1.2s linear infinite;
         }
 
-        .s05-tile[data-overflow="true"][data-revealed="true"]
+        .stage05 .s05-tile[data-overflow="true"][data-revealed="true"]
           .s05-tile-face {
           border-color: #b4ffd0;
           box-shadow:
@@ -695,80 +880,140 @@ function render() {
           to { transform: translateY(100%); }
         }
 
-        @media (max-width: 680px) {
+        @media (max-width: 760px) {
+          .stage05 {
+            padding: 12px;
+          }
+
           .stage05 .s05-panel {
+            padding: 20px;
+          }
+
+          .stage05 .s05-heading {
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+          }
+
+          .stage05 .s05-layout {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 16px;
+          }
+
+          .stage05 .s05-section {
             padding: 16px;
           }
 
-          .stage05 h1 {
-            margin-bottom: 20px;
-            padding-bottom: 14px;
-          }
-
-          .s05-layout {
-            grid-template-columns: minmax(0, 1fr);
-            gap: 28px;
-          }
-
-          .s05-decoder {
-            padding: 22px 0 0;
-            border-top: 1px solid var(--color-border, #deded8);
-            border-left: 0;
-          }
-
-          .s05-decoder h2 {
-            padding-bottom: 12px;
-          }
-
-          .s05-toolbar {
-            justify-content: flex-start;
-          }
-
-          .s05-board-wrap {
+          .stage05 .s05-board-wrap {
             max-width: 460px;
           }
+        }
 
-          .s05-cell {
+        @media (max-width: 420px) {
+          .stage05 {
+            padding: 6px;
+          }
+
+          .stage05 .s05-panel {
+            padding: 12px;
+            border-radius: 12px;
+          }
+
+          .stage05 .s05-section {
+            padding: 12px;
+          }
+
+          .stage05 .s05-toolbar {
+            align-items: stretch;
+          }
+
+          .stage05 .s05-toolbar-left,
+          .stage05 .s05-toolbar-right {
+            width: 100%;
+          }
+
+          .stage05 .s05-toolbar-left > *,
+          .stage05 .s05-toolbar-right > * {
+            flex: 1;
+          }
+
+          .stage05 .s05-score {
+            justify-content: space-between;
+          }
+
+          .stage05 .s05-cell {
             padding: 3px;
           }
 
-          .s05-decoder input {
+          .stage05 .s05-tile {
+            padding: 3px !important;
+          }
+
+          .stage05 .s05-input {
             font-size: 16px;
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .s05-tile[data-overflow="true"],
-          .s05-tile[data-overflow="true"] .s05-tile-face::after {
+          .stage05 .s05-tile[data-overflow="true"],
+          .stage05 .s05-tile[data-overflow="true"] .s05-tile-face::after {
             animation: none !important;
+          }
+
+          .stage05 .s05-button,
+          .stage05 .s05-input {
+            transition: none;
           }
         }
       </style>
 
       <div class="card s05-panel">
-        <h1>${t("title")}</h1>
+        <header class="s05-heading">
+          <div>
+            <p class="s05-eyebrow">${t("systemLabel")}</p>
+            <h1>${t("title")}</h1>
+            <p class="s05-subtitle">${t("subtitle")}</p>
+          </div>
+          <div class="s05-system-tag">
+            <span class="s05-status-dot"></span>
+            ${t("gameStatus")}
+          </div>
+        </header>
 
         <div class="s05-layout">
-          <div>
-            <div class="s05-toolbar">
-              <button
-                id="s05-toggle-game"
-                class="btn btn-ghost"
-                type="button"
-                aria-expanded="false"
-                aria-controls="s05-game-content"
-              >${t("gameTitle")} ＋</button>
+          <section class="s05-section">
+            <div class="s05-section-head">
+              <div>
+                <span class="s05-section-code">MODULE / 01</span>
+                <h2>${t("gameTitle")}</h2>
+                <p class="s05-section-desc">${t("gameIntro")}</p>
+              </div>
+            </div>
 
-              <div class="s05-score">
-                ${t("score")}:
-                <strong id="s05-score">0</strong>
+            <div class="s05-toolbar">
+              <div class="s05-toolbar-left">
+                <button
+                  id="s05-toggle-game"
+                  class="s05-button s05-button-primary"
+                  type="button"
+                  aria-expanded="false"
+                  aria-controls="s05-game-content"
+                >${t("gameTitle")} ＋</button>
               </div>
 
-              <button
-                id="s05-restart"
-                class="btn btn-ghost"
-                type="button"
-              >${t("restart")}</button>
+              <div class="s05-toolbar-right">
+                <div class="s05-score">
+                  <span>${t("score")}</span>
+                  <strong id="s05-score">0</strong>
+                </div>
+
+                <button
+                  id="s05-restart"
+                  class="s05-button"
+                  type="button"
+                >↻ ${t("restart")}</button>
+              </div>
             </div>
 
             <div id="s05-game-content" class="s05-game-content" hidden>
@@ -798,32 +1043,53 @@ function render() {
 
               <p id="s05-game-message" aria-live="polite"></p>
             </div>
-          </div>
+          </section>
 
-          <div class="s05-decoder">
-            <h2>${t("decoderTitle")}</h2>
+          <section class="s05-section s05-decoder">
+            <div class="s05-section-head">
+              <div>
+                <span class="s05-section-code">MODULE / 02</span>
+                <h2>${t("decoderTitle")}</h2>
+                <p class="s05-section-desc">${t("decoderDesc")}</p>
+              </div>
+            </div>
 
             <label for="s05-cipher">${t("cipherLabel")}</label>
             <input
               id="s05-cipher"
+              class="s05-input"
               autocomplete="off"
+              spellcheck="false"
               placeholder="${t("decodePlaceholder")}"
             />
 
             <label for="s05-key">${t("keyLabel")}</label>
             <input
               id="s05-key"
+              class="s05-input"
               autocomplete="off"
+              spellcheck="false"
               placeholder="${t("keyPlaceholder")}"
             />
 
-            <button id="s05-decode" type="button">${t("decode")}</button>
+            <button
+              id="s05-decode"
+              class="s05-button s05-button-primary"
+              type="button"
+            >${t("decode")} <span aria-hidden="true">→</span></button>
 
             <p id="s05-decode-message" aria-live="polite"></p>
+
+            <p class="s05-output-label">${t("outputLabel")}</p>
             <p id="s05-decode-output" class="s05-output"></p>
             <p id="s05-url-hint" class="s05-hidden"></p>
-          </div>
+          </section>
         </div>
+
+        <footer class="s05-footer">
+          <span>UNDEFINED_BEHAVIOR / BUILD 05</span>
+          <span class="s05-footer-state">${t("terminalStatus")}</span>
+        </footer>
       </div>
     </section>
   `;
@@ -958,8 +1224,8 @@ function decrypt() {
     urlHint.classList.remove("s05-hidden");
 
     speak(
-      "这是什么？你或许可以在某串东西后面输入 ?key=解密后的串 试试看？",
-      "What's this? Maybe try appending ?key=the-decrypted-string to a certain URL.",
+      "这是什么？试着在某个 URL 后面加上 ?key=解密后的字符串，也许会有意外发现。",
+      "What's this? Try appending ?key=the-decrypted-string to a URL. Something might happen.",
       "suspicious"
     );
   } else {
@@ -1153,8 +1419,14 @@ function move(direction) {
     rulePaused = false;
 
     speak(
-      "规则改了：相同数值不再是合并条件，现在两个方块相撞就会相乘。别问为什么，我也不想知道。",
-      "Rules changed: matching values are no longer required. When two tiles collide, they multiply. Don't ask why. I don't want to know either.",
+      "这游戏也太无聊了……让我看看代码里究竟写了些什么。",
+      "This game is so boring... Let's see what the code actually does.",
+      "curious"
+    );
+
+    speak(
+      "好了，搞定。现在方块碰到一起就会相乘，不用再管它们的数字是否相同了。怎么样？是不是有趣多了？",
+      "There. Done. Now colliding tiles multiply, whether or not their values match. What do you think? More interesting now?",
       "smug"
     );
   }
